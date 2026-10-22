@@ -71,6 +71,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     state: SettingsState,
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     onEnabledChange: (AppTarget, Boolean) -> Unit,
     onModeChange: (AppTarget, StepMode) -> Unit,
     onValueChange: (AppTarget, Int) -> Unit,
@@ -148,7 +150,40 @@ fun SettingsScreen(
                 )
             }
 
+            item { LanguageCard(language = language, onLanguageChange = onLanguageChange) }
+
             item { Footer() }
+        }
+    }
+}
+
+@Composable
+private fun LanguageCard(language: AppLanguage, onLanguageChange: (AppLanguage) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.language_title),
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = stringResource(R.string.language_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppLanguage.entries.forEach { option ->
+                    FilterChip(
+                        selected = option == language,
+                        onClick = { onLanguageChange(option) },
+                        label = { Text(stringResource(option.labelRes)) }
+                    )
+                }
+            }
         }
     }
 }

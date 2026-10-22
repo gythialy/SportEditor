@@ -1,5 +1,6 @@
 package io.github.gythialy.sporteditor.ui
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -19,10 +20,15 @@ class MainActivity : ComponentActivity() {
         MainViewModel.factory((application as SportEditorApp).settingsRepository)
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguageStore.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as SportEditorApp
+        val language = AppLanguageStore.load(this)
         setContent {
             SportEditorTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
@@ -36,6 +42,13 @@ class MainActivity : ComponentActivity() {
                 } else {
                     SettingsScreen(
                         state = state,
+                        language = language,
+                        onLanguageChange = { selected ->
+                            if (selected != language) {
+                                AppLanguageStore.save(this, selected)
+                                recreate()
+                            }
+                        },
                         onEnabledChange = viewModel::setEnabled,
                         onModeChange = viewModel::setMode,
                         onValueChange = viewModel::setValue,
