@@ -2,13 +2,18 @@ package io.github.gythialy.sporteditor.hook
 
 import io.github.gythialy.sporteditor.data.StepMode
 import io.github.gythialy.sporteditor.data.TargetSettings
+import java.time.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class StepTransformerTest {
 
     private fun settings(mode: StepMode, value: Int, enabled: Boolean = true, maxSteps: Int = TargetSettings.MAX_VALUE) =
         TargetSettings(enabled = enabled, mode = mode, value = value, maxSteps = maxSteps)
+
+    private fun transformer(extra: Int = 0, today: LocalDate = LocalDate.of(2026, 10, 22)) =
+        StepTransformer(clock = { today }, extraSteps = { extra })
 
     @Test
     fun multiply_scalesRawValue() {
@@ -60,19 +65,53 @@ class StepTransformerTest {
 
     @Test
     fun maxSteps_capsTheReportedValue() {
-        val transformer = StepTransformer()
+        val transformer = transformer()
         val config = settings(StepMode.MULTIPLY, 100, maxSteps = 80_000)
 
-        assertEquals(80_000f, transformer.transform(2_500f, config), 0.001f)
+        val first = transformer.transform(2_500f, config)
+        assertTrue("first=$first", first >= 80_000f && first <= 80_100f)
         assertEquals(1_000f, transformer.transform(10f, config), 0.001f)
     }
 
     @Test
     fun maxSteps_appliesToReplaceMode() {
-        val transformer = StepTransformer()
+        val transformer = transformer()
         val config = settings(StepMode.REPLACE, 90_000, maxSteps = 80_000)
 
-        assertEquals(80_000f, transformer.transform(10f, config), 0.001f)
+        val reported = transformer.transform(10f, config)
+        assertTrue("reported=$reported", reported >= 80_000f && reported <= 80_100f)
+    }
+
+    @Test
+    fun dailyLimit_isMaxStepsPlusUpTo100() {
+        val transformer = transformer(extra = 42)
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+
+        assertEquals(80_042f, transformer.transform(100_000f, config), 0.001f)
+    }
+
+    @Test
+    fun dailyLimit_changesWithEachDay() {
+        var today = LocalDate.of(2026, 10, 22)
+        val extras = mapOf(today.toEpochDay() to 10, today.plusDays(1).toEpochDay() to 90)
+        val transformer = StepTransformer(clock = { today }, extraSteps = { extras[it] ?: 0 })
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+
+        // Day 1: 80_000 + 10.
+        assertEquals(80_010f, transformer.transform(100_000f, config), 0.001f)
+
+        today = today.plusDays(1)
+        // A new day starts from the previous report; today's budget is 80_000 + 90.
+        assertEquals(80_010f, transformer.transform(100_000f, config), 0.001f)
+        assertEquals(160_100f, transformer.transform(180_090f, config), 0.001f)
+    }
+
+    @Test
+    fun dailyLimit_isStableForTheSameDay() {
+        val today = LocalDate.of(2026, 10, 22)
+        val first = StepTransformer(clock = { today }).transform(100_000f, settings(StepMode.MULTIPLY, 1, maxSteps = 80_000))
+        val second = StepTransformer(clock = { today }).transform(100_000f, settings(StepMode.MULTIPLY, 1, maxSteps = 80_000))
+        assertEquals(first, second, 0.001f)
     }
 
     @Test
