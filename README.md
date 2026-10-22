@@ -24,6 +24,7 @@
 - **现代 API**：基于 libxposed API 102，不使用已废弃的 `de.robv.android.xposed` API。
 - **内置诊断页**：环境快照 + 框架/配置/Hook/错误日志，支持筛选、复制、分享与清空。
 - **Material 3**：动态取色、深色模式、edge-to-edge、自适应图标。
+- **多语言**：默认简体中文，可在设置页手动切换 English。
 
 ## 支持的应用
 

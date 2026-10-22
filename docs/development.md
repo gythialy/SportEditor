@@ -30,6 +30,8 @@
   `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计。
 - 所有应用默认关闭；微信的固定值模式会被 `AppTarget.sanitize()` 回退为默认倍率模式，
   因为微信运动按增量同步，固定值无法产生增量。
+- 界面语言由 `AppLanguageStore` 保存在应用私有 SharedPreferences，`MainActivity.attachBaseContext`
+  按所选 locale 包装 Context；设置页可在简体中文 / English 之间切换，默认简体中文。
 
 ## 目录结构
 
@@ -74,7 +76,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 ## 测试
 
-- JVM 单元测试：25 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、设置模型、取值范围、日志筛选。
+- JVM 单元测试：28 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、设置模型、取值范围、日志筛选。
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```
