@@ -58,7 +58,7 @@ class MainViewModel(private val repository: SettingsRepository) : ViewModel() {
 
     fun setMaxSteps(target: AppTarget, maxSteps: Int) = repository.update(target) { it.copy(maxSteps = maxSteps) }
 
-    fun resetToDefaults() = repository.resetToDefaults()
+    fun resetTarget(target: AppTarget) = repository.reset(target)
 
     companion object {
         fun factory(repository: SettingsRepository): ViewModelProvider.Factory = viewModelFactory {

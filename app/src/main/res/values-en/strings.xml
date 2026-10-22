@@ -13,7 +13,15 @@
     <string name="section_apps_desc">Each app is configured independently with its own step count and strategy</string>
 
     <string name="action_reset">Reset</string>
-    <string name="action_reset_done">Defaults restored</string>
+    <string name="action_reset_confirm">Reset %1$s to its defaults?</string>
+    <string name="action_reset_confirm_action">Reset</string>
+    <string name="action_reset_target_done">%1$s reset</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="settings_title">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="about_title">About</string>
+    <string name="about_homepage">Project homepage</string>
+    <string name="about_license">Open-source license</string>
 
     <string name="label_mode">Strategy</string>
     <string name="label_value">Steps</string>
@@ -52,6 +60,7 @@
     <string name="footer_version">Version %1$s</string>
 <string name="debug_title">Diagnostics</string>
     <string name="debug_open">Open diagnostics</string>
+    <string name="debug_desc">Environment, config and hook logs</string>
     <string name="debug_environment">Environment</string>
     <string name="debug_targets">Target apps</string>
     <string name="debug_logs">Logs</string>

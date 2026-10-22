@@ -113,10 +113,8 @@ class SettingsRepository(context: Context, private val debugLog: DebugLogStore) 
         _state.update { it.copy(targets = it.targets + (target to next)) }
     }
 
-    fun resetToDefaults() {
-        AppTarget.entries.forEach { target ->
-            update(target) { target.defaultSettings }
-        }
+    fun reset(target: AppTarget) {
+        update(target) { target.defaultSettings }
     }
 
     /**
