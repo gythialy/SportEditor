@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Scoped package visibility for loading the icons of supported apps. -->
     <queries>
         <package android:name="com.tencent.mm" />
