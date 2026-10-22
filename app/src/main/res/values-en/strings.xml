@@ -93,4 +93,13 @@
     <string name="language_desc">Choose the app language. Defaults to Simplified Chinese.</string>
     <string name="language_chinese">简体中文</string>
     <string name="language_english">English</string>
+
+    <string name="update_title">Updates</string>
+    <string name="update_current">Current version %1$s</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_up_to_date">You are up to date</string>
+    <string name="update_available">Version %1$s is available</string>
+    <string name="update_open">Open release page</string>
+    <string name="update_error">Check failed: %1$s</string>
 </resources>

@@ -73,6 +73,9 @@ fun SettingsScreen(
     state: SettingsState,
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
+    updateState: UpdateUiState,
+    onCheckUpdate: () -> Unit,
+    onOpenRelease: (String) -> Unit,
     onEnabledChange: (AppTarget, Boolean) -> Unit,
     onModeChange: (AppTarget, StepMode) -> Unit,
     onValueChange: (AppTarget, Int) -> Unit,
@@ -124,6 +127,14 @@ fun SettingsScreen(
             item { ServiceStatusCard(state) }
 
             item {
+                UpdateCard(
+                    updateState = updateState,
+                    onCheckUpdate = onCheckUpdate,
+                    onOpenRelease = onOpenRelease
+                )
+            }
+
+            item {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = stringResource(R.string.section_apps),
@@ -153,6 +164,70 @@ fun SettingsScreen(
             item { LanguageCard(language = language, onLanguageChange = onLanguageChange) }
 
             item { Footer() }
+        }
+    }
+}
+
+@Composable
+private fun UpdateCard(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onOpenRelease: (String) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.update_title),
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = stringResource(R.string.update_current, BuildConfig.VERSION_NAME),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            val update = updateState.update
+            when {
+                update != null -> {
+                    Text(
+                        text = stringResource(R.string.update_available, update.version),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    TextButton(onClick = { onOpenRelease(update.htmlUrl) }) {
+                        Text(stringResource(R.string.update_open))
+                    }
+                }
+
+                updateState.upToDate -> Text(
+                    text = stringResource(R.string.update_up_to_date),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                updateState.error != null -> Text(
+                    text = stringResource(R.string.update_error, updateState.error),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+
+            TextButton(
+                onClick = onCheckUpdate,
+                enabled = !updateState.checking
+            ) {
+                Text(
+                    stringResource(
+                        if (updateState.checking) R.string.update_checking else R.string.update_check
+                    )
+                )
+            }
         }
     }
 }

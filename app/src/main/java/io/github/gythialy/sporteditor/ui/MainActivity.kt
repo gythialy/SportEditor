@@ -1,6 +1,8 @@
 package io.github.gythialy.sporteditor.ui
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,6 +34,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             SportEditorTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
+                val updateState by viewModel.updateState.collectAsStateWithLifecycle()
                 var showDiagnostics by rememberSaveable { mutableStateOf(false) }
                 if (showDiagnostics) {
                     DiagnosticsScreen(
@@ -47,6 +50,13 @@ class MainActivity : ComponentActivity() {
                             if (selected != language) {
                                 AppLanguageStore.save(this, selected)
                                 recreate()
+                            }
+                        },
+                        updateState = updateState,
+                        onCheckUpdate = viewModel::checkForUpdates,
+                        onOpenRelease = { url ->
+                            runCatching {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                             }
                         },
                         onEnabledChange = viewModel::setEnabled,
