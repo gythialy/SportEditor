@@ -26,6 +26,8 @@
   Remote Preferences；目标进程用 `getRemotePreferences()` 读取并注册变更监听，
   在进程运行/解冻时应用新配置。
 - 步数计算集中在纯 Kotlin 的 `StepTransformer`，不依赖 Android，便于 JVM 单元测试。
+- 每日基线与当日上限通过 `DailyStateStore` 持久化到目标应用的私有
+  `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计。
 - 所有应用默认关闭；微信的固定值模式会被 `AppTarget.sanitize()` 回退为默认倍率模式，
   因为微信运动按增量同步，固定值无法产生增量。
 
@@ -72,7 +74,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 ## 测试
 
-- JVM 单元测试：20 个用例，覆盖步数策略、每日上限裁剪、设置模型、取值范围、日志筛选。
+- JVM 单元测试：25 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、设置模型、取值范围、日志筛选。
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```
@@ -99,6 +101,8 @@ Dependabot 每周检查 Gradle 依赖与 GitHub Actions，配置见
 
 ## 已知限制
 
-- 每日上限限制的是**上报的传感器值**（`min(reported, maxSteps)`），不是按自然日重置基线。
-- 微信运动按增量同步，超过上限后当天增量会停止；跨天行为需真机确认，必要时再补日切逻辑。
+- 每日基线保存在目标应用的私有 SharedPreferences 中；清除目标应用数据或重装会重置基线。
+- 上报的绝对值会按天累加，长期运行最终受 `9,999,999` 保护上限限制。
+- 微信运动按增量同步，跨天边界与上限抖动仍需真机连续两天验证。
+- 时区或系统日期大幅跳变时，当天基线可能被提前/推迟重置。
 - 模拟器无法验证真实计步传感器。

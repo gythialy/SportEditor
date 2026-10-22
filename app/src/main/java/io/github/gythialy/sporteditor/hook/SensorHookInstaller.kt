@@ -41,6 +41,9 @@ internal class SensorHookInstaller(
     @Volatile
     private var contextLogged = false
 
+    @Volatile
+    private var appContext: Context? = null
+
     fun install(classLoader: ClassLoader) {
         // Each phase is isolated: a reflection failure in one must not prevent the other.
         runCatching { hookContextCapture(classLoader) }
@@ -83,6 +86,7 @@ internal class SensorHookInstaller(
                             contextField.get(chain.thisObject) as? Context
                         }.getOrNull()
                         if (context != null) {
+                            appContext = context
                             if (!contextLogged) {
                                 contextLogged = true
                                 module.log(Log.INFO, TAG, "captured context from sensor manager")
@@ -130,7 +134,10 @@ internal class SensorHookInstaller(
                             val context = runCatching {
                                 contextField.get(chain.thisObject) as? Context
                             }.getOrNull()
-                            if (context != null) onContext?.invoke(context)
+                            if (context != null) {
+                                appContext = context
+                                onContext?.invoke(context)
+                            }
                         }
                         val sensor = chain.args.getOrNull(sensorIndex) as? Sensor
                         if (sensor != null) {
@@ -201,7 +208,14 @@ internal class SensorHookInstaller(
         if (!current.enabled) return
 
         // Counter and detector are independent sensors; keep separate auto-increment state.
-        val transformer = transformers.getOrPut(type) { StepTransformer() }
+        val transformer = transformers.getOrPut(type) {
+            StepTransformer(
+                store = SharedPreferencesDailyStateStore(
+                    contextProvider = { appContext },
+                    key = target.key + "." + type
+                )
+            )
+        }
         val raw = values[0]
         values[0] = transformer.transform(raw, current)
         if (stepEvents.getAndIncrement() < MAX_STEP_LOG_EVENTS) {
