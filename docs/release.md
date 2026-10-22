@@ -55,8 +55,8 @@ CI 工作流不设置该变量，因此会产出 debug 签名的 `release-apk-ci
 ### 触发发布
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.0
+git push origin v1.1.0
 ```
 
 或用 GitHub Actions 页面的 **Release → Run workflow** 手动构建（手动触发只上传 APK，不创建 Release）。
