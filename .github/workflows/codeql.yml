@@ -12,9 +12,12 @@ on:
 permissions:
   contents: read
 
+# Do not cancel an in-flight analysis: interrupted CodeQL runs can upload an
+# empty result ("No Java/Kotlin code found") that shows up as a code scanning
+# configuration error. Queue analyses instead.
 concurrency:
   group: codeql-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   analyze:
