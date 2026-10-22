@@ -15,6 +15,16 @@ class StepTransformerTest {
     private fun transformer(extra: Int = 0, today: LocalDate = LocalDate.of(2026, 10, 22)) =
         StepTransformer(clock = { today }, extraSteps = { extra })
 
+    private class MemoryStore : DailyStateStore {
+        var state: DailyState? = null
+
+        override fun load(): DailyState? = state
+
+        override fun save(state: DailyState) {
+            this.state = state
+        }
+    }
+
     @Test
     fun multiply_scalesRawValue() {
         val transformer = StepTransformer()
@@ -112,6 +122,37 @@ class StepTransformerTest {
         val first = StepTransformer(clock = { today }).transform(100_000f, settings(StepMode.MULTIPLY, 1, maxSteps = 80_000))
         val second = StepTransformer(clock = { today }).transform(100_000f, settings(StepMode.MULTIPLY, 1, maxSteps = 80_000))
         assertEquals(first, second, 0.001f)
+    }
+
+    @Test
+    fun state_survivesProcessRestart() {
+        val store = MemoryStore()
+        val today = LocalDate.of(2026, 10, 22)
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+
+        val first = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        assertEquals(80_000f, first.transform(100_000f, config), 0.001f)
+        assertEquals(160_000f, first.transform(180_000f, config), 0.001f)
+
+        // A new process restores the day's baseline and keeps the same daily budget.
+        val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        assertEquals(160_000f, second.transform(190_000f, config), 0.001f)
+    }
+
+    @Test
+    fun dayRollover_usesPersistedLastReportedValue() {
+        val store = MemoryStore()
+        var today = LocalDate.of(2026, 10, 22)
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+
+        val first = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        assertEquals(80_000f, first.transform(100_000f, config), 0.001f)
+        assertEquals(160_000f, first.transform(180_000f, config), 0.001f)
+
+        today = today.plusDays(1)
+        val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        assertEquals(160_000f, second.transform(190_000f, config), 0.001f)
+        assertEquals(230_000f, second.transform(260_000f, config), 0.001f)
     }
 
     @Test

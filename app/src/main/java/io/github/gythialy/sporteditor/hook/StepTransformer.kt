@@ -20,12 +20,14 @@ import kotlin.random.Random
  *
  * The class is intentionally free of Android dependencies so it can be unit tested.
  */
-class StepTransformer(
+internal class StepTransformer(
     private val clock: () -> LocalDate = { LocalDate.now() },
     private val extraSteps: (epochDay: Long) -> Int = { epochDay ->
         Random(epochDay).nextInt(0, DAILY_JITTER_LIMIT + 1)
-    }
+    },
+    private val store: DailyStateStore? = null
 ) {
+    private var restored = false
     private var day: LocalDate? = null
     private var baselineRaw = 0f
     private var dayStartReported = 0f
@@ -33,9 +35,14 @@ class StepTransformer(
     private var lastReported = 0f
     private var autoCount = 0
 
+    init {
+        restore()
+    }
+
     @Synchronized
     fun transform(raw: Float, settings: TargetSettings): Float {
         if (!settings.enabled) return raw
+        if (!restored) restore()
 
         val today = clock()
         val counterReset = raw < baselineRaw
@@ -62,7 +69,34 @@ class StepTransformer(
         }
 
         lastReported = sanitize(capped)
+        persist()
         return lastReported
+    }
+
+    private fun restore() {
+        if (restored) return
+        val state = store?.load() ?: return
+        restored = true
+        day = runCatching { LocalDate.ofEpochDay(state.epochDay) }.getOrNull()
+        baselineRaw = state.baselineRaw
+        dayStartReported = state.dayStartReported
+        dailyLimit = state.dailyLimit
+        lastReported = state.lastReported
+        autoCount = state.autoCount
+    }
+
+    private fun persist() {
+        val currentDay = day ?: return
+        store?.save(
+            DailyState(
+                epochDay = currentDay.toEpochDay(),
+                baselineRaw = baselineRaw,
+                dayStartReported = dayStartReported,
+                dailyLimit = dailyLimit,
+                lastReported = lastReported,
+                autoCount = autoCount
+            )
+        )
     }
 
     private fun beginDay(today: LocalDate, raw: Float, settings: TargetSettings, counterReset: Boolean) {
