@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">运动修改器</string>
+    <string name="module_description">修改微信、支付宝、QQ、微博的运动步数，支持为每个应用单独设置</string>
+
+    <string name="status_connected">LSPosed 服务已连接</string>
+    <string name="status_disconnected">LSPosed 服务未连接</string>
+    <string name="status_connected_detail">框架：%1$s %2$s · API %3$d</string>
+    <string name="status_disconnected_hint">请在 LSPosed 管理器中启用本模块，勾选目标应用作为作用域，然后重启本应用。</string>
+    <string name="status_not_synced">当前设置只保存在本机，连接 LSPosed 服务后才会同步到被修改的应用。</string>
+
+    <string name="section_apps">应用</string>
+    <string name="section_apps_desc">每个应用独立生效，可分别设置步数与修改方式</string>
+
+    <string name="action_reset">恢复默认</string>
+    <string name="action_reset_done">已恢复默认设置</string>
+
+    <string name="label_mode">修改方式</string>
+    <string name="label_value">步数</string>
+
+    <string name="mode_multiply">倍率</string>
+    <string name="mode_add">增加</string>
+    <string name="mode_auto">自动增加</string>
+    <string name="mode_replace">固定值</string>
+
+
+    <string name="preview_target">按实际 %1$s 步计算 → %2$s 步</string>
+    <string name="preview_auto">每次回调 +%1$s 步，累计 %2$s 后重置</string>
+    <string name="preview_replace">固定返回 %1$s 步</string>
+
+    <string name="preset_multiply">×%1$s</string>
+    <string name="preset_value">%1$s</string>
+
+    <string name="unit_multiply">倍</string>
+    <string name="unit_steps">步</string>
+
+    <string name="step_decrease">减少</string>
+    <string name="step_increase">增加</string>
+
+    <string name="app_wechat">微信</string>
+    <string name="app_alipay">支付宝</string>
+    <string name="app_qq">QQ</string>
+    <string name="app_weibo">微博</string>
+    <string name="app_not_installed">未安装</string>
+
+    <string name="module_package_label">包名：%1$s</string>
+    <string name="toggle_app">启用或关闭 %1$s</string>
+    <string name="invalid_value">请输入 %1$d - %2$d 之间的整数</string>
+
+    <string name="footer_disclaimer">本模块仅供学习与测试使用，使用风险自负。</string>
+    <string name="footer_scope">作用域：微信、支付宝、QQ、微博</string>
+    <string name="footer_version">版本 %1$s</string>
+<string name="debug_title">诊断</string>
+    <string name="debug_open">打开诊断</string>
+    <string name="debug_environment">环境</string>
+    <string name="debug_targets">目标应用</string>
+    <string name="debug_logs">日志</string>
+    <string name="debug_filter_all">全部</string>
+    <string name="debug_type_framework">框架</string>
+    <string name="debug_type_config">配置</string>
+    <string name="debug_type_hook">Hook</string>
+    <string name="debug_type_error">错误</string>
+    <string name="debug_copy">复制</string>
+    <string name="debug_share">分享</string>
+    <string name="debug_clear">清空</string>
+    <string name="debug_copied">诊断信息已复制</string>
+    <string name="debug_cleared">日志已清空</string>
+    <string name="debug_empty">暂无日志。重启目标应用或修改一次设置后会出现记录。</string>
+    <string name="debug_tip_logcat">完整 Hook 日志：adb logcat -s SportEditor</string>
+    <string name="debug_tip_framework">框架日志：LSPosed/Vector 管理器 → 日志</string>
+    <string name="debug_app_version">应用</string>
+    <string name="debug_build_type">构建</string>
+    <string name="debug_android">Android</string>
+    <string name="debug_device">设备</string>
+    <string name="debug_framework">框架</string>
+    <string name="debug_service">服务</string>
+    <string name="debug_connected">已连接</string>
+    <string name="debug_disconnected">未连接</string>
+    <string name="debug_installed">已安装</string>
+    <string name="debug_not_installed">未安装</string>
+    <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
+    <string name="debug_empty_filtered">当前筛选条件下没有日志。</string>
+<string name="mode_help">说明</string>
+    <string name="mode_help_title">修改方式说明</string>
+    <string name="mode_multiply_desc">实际步数 × 设定倍率。步数增量会按比例放大，微信运动推荐使用。</string>
+    <string name="mode_add_desc">实际步数 + 设定值。只整体抬高步数，增量仍接近真实步数。</string>
+    <string name="mode_auto_desc">每次传感器回调递增设定值，累计到 100,000 后重置，适合支付宝。</string>
+    <string name="mode_replace_desc">始终返回设定值。微信运动按增量同步时固定值可能不生效，建议优先用倍率或增加。</string>
+<string name="label_max_steps">每日上限</string>
+    <string name="max_steps_hint">达到上限后不再增加</string>
+</resources>

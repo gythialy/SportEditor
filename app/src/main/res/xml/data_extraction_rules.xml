@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <!-- Backups are disabled; this file only documents that no app data may leave the device. -->
+    <cloud-backup>
+        <exclude domain="sharedpref" path="local_settings.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="local_settings.xml" />
+    </device-transfer>
+</data-extraction-rules>

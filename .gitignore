@@ -1,0 +1,23 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+**/build/
+/captures
+
+# Kotlin incremental build session data
+/.kotlin/
+
+# Local build sandbox (Gradle user home, Android user home, temp artifacts)
+/.build-home/
+/.android-home/
+/.tmp/
+/.tmp-emu/
+/.avd/
+/.emulator-cache/
+
+# Signing material
+*.jks
+*.keystore
