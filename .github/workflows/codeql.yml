@@ -12,9 +12,8 @@ on:
 permissions:
   contents: read
 
-# Do not cancel an in-flight analysis: interrupted CodeQL runs can upload an
-# empty result ("No Java/Kotlin code found") that shows up as a code scanning
-# configuration error. Queue analyses instead.
+# Queue analyses instead of cancelling them, so every push gets a complete
+# code scanning result.
 concurrency:
   group: codeql-${{ github.ref }}
   cancel-in-progress: false
@@ -51,10 +50,14 @@ jobs:
           languages: java-kotlin
           build-mode: manual
 
+      # CodeQL only sees Kotlin/Java that is actually compiled. A restored
+      # Gradle build cache can make assembleDebug "up-to-date" without running
+      # kotlinc, which produced "No Java/Kotlin code found", so force a real
+      # compilation.
       - name: Build for CodeQL
         run: |
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          ./gradlew :app:assembleDebug --no-daemon --no-build-cache --rerun-tasks --stacktrace
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4
