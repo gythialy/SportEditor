@@ -34,6 +34,8 @@
   按所选 locale 包装 Context；设置页可在简体中文 / English 之间切换，默认简体中文。
 - `UpdateChecker` 通过 GitHub Releases API 检查新版本（需要 `INTERNET` 权限），由设置页手动触发；
   版本比较由纯 Kotlin 的 `VersionComparator` 完成。
+- 主界面只保留应用配置与设置入口；语言、版本更新、诊断与关于信息集中在设置页。
+- 每个应用卡片可单独重置为默认值（二次确认），不存在全局重置。
 
 ## 目录结构
 

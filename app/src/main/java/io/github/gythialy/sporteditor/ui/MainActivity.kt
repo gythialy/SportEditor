@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -31,20 +32,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         val app = application as SportEditorApp
         val language = AppLanguageStore.load(this)
+        val openUrl: (String) -> Unit = { url ->
+            runCatching {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            }
+        }
         setContent {
             SportEditorTheme {
                 val state by viewModel.state.collectAsStateWithLifecycle()
                 val updateState by viewModel.updateState.collectAsStateWithLifecycle()
-                var showDiagnostics by rememberSaveable { mutableStateOf(false) }
-                if (showDiagnostics) {
-                    DiagnosticsScreen(
-                        state = state,
-                        store = app.debugLogStore,
-                        onBack = { showDiagnostics = false }
-                    )
-                } else {
-                    SettingsScreen(
-                        state = state,
+                var screen by rememberSaveable { mutableStateOf("main") }
+
+                BackHandler(enabled = screen != "main") {
+                    screen = if (screen == "diagnostics") "settings" else "main"
+                }
+
+                when (screen) {
+                    "settings" -> SettingsDetailScreen(
                         language = language,
                         onLanguageChange = { selected ->
                             if (selected != language) {
@@ -54,17 +58,26 @@ class MainActivity : ComponentActivity() {
                         },
                         updateState = updateState,
                         onCheckUpdate = viewModel::checkForUpdates,
-                        onOpenRelease = { url ->
-                            runCatching {
-                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                            }
-                        },
+                        onOpenRelease = openUrl,
+                        onOpenDiagnostics = { screen = "diagnostics" },
+                        onOpenUrl = openUrl,
+                        onBack = { screen = "main" }
+                    )
+
+                    "diagnostics" -> DiagnosticsScreen(
+                        state = state,
+                        store = app.debugLogStore,
+                        onBack = { screen = "settings" }
+                    )
+
+                    else -> SettingsScreen(
+                        state = state,
                         onEnabledChange = viewModel::setEnabled,
                         onModeChange = viewModel::setMode,
                         onValueChange = viewModel::setValue,
                         onMaxStepsChange = viewModel::setMaxSteps,
-                        onReset = viewModel::resetToDefaults,
-                        onOpenDiagnostics = { showDiagnostics = true }
+                        onResetTarget = viewModel::resetTarget,
+                        onOpenSettings = { screen = "settings" }
                     )
                 }
             }

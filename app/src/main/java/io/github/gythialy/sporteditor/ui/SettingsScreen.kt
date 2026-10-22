@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,7 +19,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -71,23 +73,16 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     state: SettingsState,
-    language: AppLanguage,
-    onLanguageChange: (AppLanguage) -> Unit,
-    updateState: UpdateUiState,
-    onCheckUpdate: () -> Unit,
-    onOpenRelease: (String) -> Unit,
     onEnabledChange: (AppTarget, Boolean) -> Unit,
     onModeChange: (AppTarget, StepMode) -> Unit,
     onValueChange: (AppTarget, Int) -> Unit,
     onMaxStepsChange: (AppTarget, Int) -> Unit,
-    onReset: () -> Unit,
-    onOpenDiagnostics: () -> Unit,
+    onResetTarget: (AppTarget) -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
-    val resetMessage = stringResource(R.string.action_reset_done)
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -96,21 +91,11 @@ fun SettingsScreen(
             CenterAlignedTopAppBar(
                 title = { Text(stringResource(R.string.app_name)) },
                 actions = {
-                    IconButton(onClick = onOpenDiagnostics) {
+                    IconButton(onClick = onOpenSettings) {
                         Icon(
-                            imageVector = Icons.Filled.Info,
-                            contentDescription = stringResource(R.string.debug_open)
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.settings_title)
                         )
-                    }
-                    TextButton(
-                        onClick = {
-                            // Commit any pending edit before defaults replace it.
-                            focusManager.clearFocus()
-                            onReset()
-                            scope.launch { snackbarHostState.showSnackbar(resetMessage) }
-                        }
-                    ) {
-                        Text(stringResource(R.string.action_reset))
                     }
                 }
             )
@@ -125,14 +110,6 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item { ServiceStatusCard(state) }
-
-            item {
-                UpdateCard(
-                    updateState = updateState,
-                    onCheckUpdate = onCheckUpdate,
-                    onOpenRelease = onOpenRelease
-                )
-            }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -150,6 +127,8 @@ fun SettingsScreen(
 
             items(AppTarget.entries.toList(), key = { it.key }) { target ->
                 val iconState = rememberAppIcon(target)
+                val label = stringResource(target.labelRes())
+                val resetDone = stringResource(R.string.action_reset_target_done, label)
                 TargetCard(
                     target = target,
                     iconState = iconState,
@@ -157,108 +136,15 @@ fun SettingsScreen(
                     onEnabledChange = { onEnabledChange(target, it) },
                     onModeChange = { onModeChange(target, it) },
                     onValueChange = { onValueChange(target, it) },
-                    onMaxStepsChange = { onMaxStepsChange(target, it) }
+                    onMaxStepsChange = { onMaxStepsChange(target, it) },
+                    onReset = {
+                        onResetTarget(target)
+                        scope.launch { snackbarHostState.showSnackbar(resetDone) }
+                    }
                 )
             }
-
-            item { LanguageCard(language = language, onLanguageChange = onLanguageChange) }
 
             item { Footer() }
-        }
-    }
-}
-
-@Composable
-private fun UpdateCard(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onOpenRelease: (String) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.update_title),
-                    style = MaterialTheme.typography.titleSmall
-                )
-                Text(
-                    text = stringResource(R.string.update_current, BuildConfig.VERSION_NAME),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            val update = updateState.update
-            when {
-                update != null -> {
-                    Text(
-                        text = stringResource(R.string.update_available, update.version),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    TextButton(onClick = { onOpenRelease(update.htmlUrl) }) {
-                        Text(stringResource(R.string.update_open))
-                    }
-                }
-
-                updateState.upToDate -> Text(
-                    text = stringResource(R.string.update_up_to_date),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                updateState.error != null -> Text(
-                    text = stringResource(R.string.update_error, updateState.error),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-
-            TextButton(
-                onClick = onCheckUpdate,
-                enabled = !updateState.checking
-            ) {
-                Text(
-                    stringResource(
-                        if (updateState.checking) R.string.update_checking else R.string.update_check
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun LanguageCard(language: AppLanguage, onLanguageChange: (AppLanguage) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.language_title),
-                style = MaterialTheme.typography.titleSmall
-            )
-            Text(
-                text = stringResource(R.string.language_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AppLanguage.entries.forEach { option ->
-                    FilterChip(
-                        selected = option == language,
-                        onClick = { onLanguageChange(option) },
-                        label = { Text(stringResource(option.labelRes)) }
-                    )
-                }
-            }
         }
     }
 }
@@ -337,10 +223,12 @@ private fun TargetCard(
     onEnabledChange: (Boolean) -> Unit,
     onModeChange: (StepMode) -> Unit,
     onValueChange: (Int) -> Unit,
-    onMaxStepsChange: (Int) -> Unit
+    onMaxStepsChange: (Int) -> Unit,
+    onReset: () -> Unit
 ) {
     val appLabel = stringResource(target.labelRes())
     val toggleDescription = stringResource(R.string.toggle_app, appLabel)
+    var showResetDialog by rememberSaveable { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -392,7 +280,51 @@ private fun TargetCard(
                     onMaxStepsChange = onMaxStepsChange
                 )
             }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = { showResetDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.RestartAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.action_reset))
+                }
+            }
         }
+    }
+
+    if (showResetDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetDialog = false },
+            title = { Text(stringResource(R.string.action_reset)) },
+            text = { Text(stringResource(R.string.action_reset_confirm, appLabel)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showResetDialog = false
+                        onReset()
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.RestartAlt,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.action_reset_confirm_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
     }
 }
 

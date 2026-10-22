@@ -12,8 +12,16 @@
     <string name="section_apps">应用</string>
     <string name="section_apps_desc">每个应用独立生效，可分别设置步数与修改方式</string>
 
-    <string name="action_reset">恢复默认</string>
-    <string name="action_reset_done">已恢复默认设置</string>
+    <string name="action_reset">重置</string>
+    <string name="action_reset_confirm">将「%1$s」恢复为默认设置？</string>
+    <string name="action_reset_confirm_action">重置</string>
+    <string name="action_reset_target_done">已重置 %1$s</string>
+    <string name="action_cancel">取消</string>
+    <string name="settings_title">设置</string>
+    <string name="action_back">返回</string>
+    <string name="about_title">关于</string>
+    <string name="about_homepage">项目主页</string>
+    <string name="about_license">开源许可证</string>
 
     <string name="label_mode">修改方式</string>
     <string name="label_value">步数</string>
@@ -52,6 +60,7 @@
     <string name="footer_version">版本 %1$s</string>
 <string name="debug_title">诊断</string>
     <string name="debug_open">打开诊断</string>
+    <string name="debug_desc">环境快照、配置与 Hook 日志</string>
     <string name="debug_environment">环境</string>
     <string name="debug_targets">目标应用</string>
     <string name="debug_logs">日志</string>
