@@ -1,9 +1,9 @@
 package io.github.gythialy.sporteditor.hook
 
+import io.github.gythialy.sporteditor.data.DailyLimit
 import io.github.gythialy.sporteditor.data.StepMode
 import io.github.gythialy.sporteditor.data.TargetSettings
 import java.time.LocalDate
-import kotlin.random.Random
 
 /**
  * Applies a [TargetSettings] to a raw sensor step value.
@@ -15,7 +15,7 @@ import kotlin.random.Random
  *    the current raw value becomes the day's baseline.
  *  - [TargetSettings.maxSteps] is the total reported value the target app may see for today,
  *    so every mode is capped by that absolute limit, not by an accumulated delta.
- *  - The daily limit is [TargetSettings.maxSteps] plus a per-day random value in 0..100.
+ *  - The daily limit is [TargetSettings.maxSteps] plus [DailyLimit]'s per-day jitter (0..100).
  *    Lowering the limit mid-day takes effect immediately: the report stops growing at the
  *    new cap instead of staying at the already-breached value.
  *
@@ -23,9 +23,7 @@ import kotlin.random.Random
  */
 internal class StepTransformer(
     private val clock: () -> LocalDate = { LocalDate.now() },
-    private val extraSteps: (epochDay: Long) -> Int = { epochDay ->
-        Random(epochDay).nextInt(0, DAILY_JITTER_LIMIT + 1)
-    },
+    private val extraSteps: (epochDay: Long) -> Int = DailyLimit::jitter,
     private val store: DailyStateStore? = null
 ) {
     private var restored = false
@@ -55,8 +53,7 @@ internal class StepTransformer(
         // the day's random jitter differs). Keep the persisted budget only when it is not
         // larger than today's budget, so an already-breached cap stops immediately instead of
         // staying at the old value for the rest of the day.
-        val todayLimit = (settings.maxSteps + extraSteps(today.toEpochDay()))
-            .coerceIn(1, TargetSettings.MAX_VALUE)
+        val todayLimit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         if (todayLimit != dailyLimit) {
             dailyLimit = todayLimit
         }
@@ -104,8 +101,7 @@ internal class StepTransformer(
     }
 
     private fun beginDay(today: LocalDate, raw: Float, settings: TargetSettings, counterReset: Boolean) {
-        dailyLimit = (settings.maxSteps + extraSteps(today.toEpochDay()))
-            .coerceIn(1, TargetSettings.MAX_VALUE)
+        dailyLimit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
 
         // Track the raw value so a reboot (counter rolling back) can be detected. The daily
         // cap itself is absolute: the target app never sees more than dailyLimit today.
@@ -136,8 +132,5 @@ internal class StepTransformer(
     companion object {
         /** Upper bound reported to target apps to avoid overflow in their own math. */
         const val MAX_STEPS = 9_999_999f
-
-        /** At most this many extra steps are added to the configured daily limit. */
-        const val DAILY_JITTER_LIMIT = 100
     }
 }

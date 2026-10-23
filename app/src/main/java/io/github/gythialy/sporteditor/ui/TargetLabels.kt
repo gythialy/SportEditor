@@ -37,6 +37,15 @@ fun StepMode.descRes(): Int = when (this) {
     StepMode.REPLACE -> R.string.mode_replace_desc
 }
 
+/** Compact label used by the segmented control, where four full labels do not fit. */
+@StringRes
+fun StepMode.shortLabelRes(): Int = when (this) {
+    StepMode.MULTIPLY -> R.string.mode_short_multiply
+    StepMode.ADD -> R.string.mode_short_add
+    StepMode.AUTO -> R.string.mode_short_auto
+    StepMode.REPLACE -> R.string.mode_short_replace
+}
+
 @StringRes
 fun StepMode.unitRes(): Int = when (this) {
     StepMode.MULTIPLY -> R.string.unit_multiply

@@ -3,26 +3,47 @@
     <string name="app_name">Sport Editor</string>
     <string name="module_description">Modify step counts for WeChat, Alipay, QQ and Weibo, configurable per app</string>
 
+    <!-- Home -->
+    <string name="home_subtitle">%1$d apps · %2$d enabled</string>
+    <string name="status_badge_connected">Connected</string>
+    <string name="status_badge_disconnected">Disconnected</string>
     <string name="status_connected">LSPosed service connected</string>
     <string name="status_disconnected">LSPosed service not connected</string>
     <string name="status_connected_detail">Framework: %1$s %2$s · API %3$d</string>
     <string name="status_disconnected_hint">Enable this module in LSPosed, select the target apps as scope, then restart this app.</string>
     <string name="status_not_synced">Settings are stored on this device only. Connect the LSPosed service to sync them to the hooked apps.</string>
+    <string name="status_sheet_title">Connection</string>
+    <string name="action_view_steps">View steps</string>
 
-    <string name="section_apps">Apps</string>
-    <string name="section_apps_desc">Each app is configured independently with its own step count and strategy</string>
-
+    <string name="action_more">More</string>
     <string name="action_reset">Reset</string>
+    <string name="action_reset_default">Reset to defaults</string>
     <string name="action_reset_confirm">Reset %1$s to its defaults?</string>
     <string name="action_reset_confirm_action">Reset</string>
     <string name="action_reset_target_done">%1$s reset</string>
     <string name="action_cancel">Cancel</string>
+
+    <string name="app_summary_disabled">Off</string>
+    <string name="app_summary_multiply">%1$s× · max %2$s</string>
+    <string name="app_summary_add">+%1$s · max %2$s</string>
+    <string name="app_summary_auto">Auto +%1$s · max %2$s</string>
+    <string name="app_summary_replace">Fixed %1$s · max %2$s</string>
+
+    <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="action_back">Back</string>
+    <string name="section_general">General</string>
     <string name="about_title">About</string>
     <string name="about_homepage">Project homepage</string>
     <string name="about_license">Open-source license</string>
+    <string name="settings_version">Version</string>
 
+    <string name="theme_title">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+
+    <!-- Steps editor -->
     <string name="label_mode">Strategy</string>
     <string name="label_value">Steps</string>
 
@@ -31,6 +52,10 @@
     <string name="mode_auto">Auto</string>
     <string name="mode_replace">Fixed</string>
 
+    <string name="mode_short_multiply">Multiplier</string>
+    <string name="mode_short_add">Add</string>
+    <string name="mode_short_auto">Auto</string>
+    <string name="mode_short_replace">Fixed</string>
 
     <string name="preview_target">At %1$s real steps → %2$s steps</string>
     <string name="preview_auto">Adds %1$s per callback, resets after %2$s</string>
@@ -51,19 +76,20 @@
     <string name="app_weibo">Weibo</string>
     <string name="app_not_installed">Not installed</string>
 
-    <string name="module_package_label">Package: %1$s</string>
     <string name="toggle_app">Enable or disable %1$s</string>
     <string name="invalid_value">Allowed range: %1$d – %2$d</string>
 
     <string name="footer_disclaimer">For learning and testing only. Use at your own risk.</string>
-    <string name="footer_scope">Scope: WeChat, Alipay, QQ, Weibo</string>
     <string name="footer_version">Version %1$s</string>
-<string name="debug_title">Diagnostics</string>
-    <string name="debug_open">Open diagnostics</string>
+
+    <!-- Diagnostics -->
+    <string name="debug_title">Diagnostics</string>
     <string name="debug_desc">Environment, config and hook logs</string>
+    <string name="debug_more_actions">More actions</string>
     <string name="debug_environment">Environment</string>
     <string name="debug_targets">Target apps</string>
     <string name="debug_logs">Logs</string>
+    <string name="debug_log_count">%1$d entries</string>
     <string name="debug_filter_all">All</string>
     <string name="debug_type_framework">Framework</string>
     <string name="debug_type_config">Config</string>
@@ -75,6 +101,7 @@
     <string name="debug_copied">Diagnostics copied</string>
     <string name="debug_cleared">Logs cleared</string>
     <string name="debug_empty">No logs yet. Restart a target app or change a setting.</string>
+    <string name="debug_empty_filtered">No logs match the current filter.</string>
     <string name="debug_tip_logcat">Full hook log: adb logcat -s SportEditor</string>
     <string name="debug_tip_framework">Framework log: LSPosed/Vector manager → Logs</string>
     <string name="debug_app_version">App</string>
@@ -88,21 +115,23 @@
     <string name="debug_installed">Installed</string>
     <string name="debug_not_installed">Not installed</string>
     <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
-    <string name="debug_empty_filtered">No logs match the current filter.</string>
-<string name="mode_help">Help</string>
+
+    <string name="mode_help">Help</string>
     <string name="mode_help_title">Strategy help</string>
     <string name="mode_multiply_desc">Real steps × multiplier. Increments scale proportionally; recommended for WeRun.</string>
     <string name="mode_add_desc">Real steps + a fixed offset. Keeps real increments and raises the total.</string>
     <string name="mode_auto_desc">Adds the configured value per sensor callback until the daily max is reached, then stops for the rest of the day. Best for Alipay.</string>
     <string name="mode_replace_desc">Always reports the fixed value. WeRun syncs increments, so fixed values often have no effect; prefer Multiply or Add.</string>
-<string name="label_max_steps">Daily max</string>
-    <string name="max_steps_hint">Stops increasing once the cap is reached (varies by 0-100 steps daily)</string>
+    <string name="label_max_steps">Daily max</string>
+    <string name="label_max_steps_base">Base max</string>
+    <string name="max_steps_effective_hint">Effective today: %1$s steps (base + a daily random 0–100)</string>
 
+    <!-- Language -->
     <string name="language_title">Language</string>
-    <string name="language_desc">Choose the app language. Defaults to Simplified Chinese.</string>
     <string name="language_chinese">简体中文</string>
     <string name="language_english">English</string>
 
+    <!-- Updates -->
     <string name="update_title">Updates</string>
     <string name="update_current">Current version %1$s</string>
     <string name="update_check">Check for updates</string>
