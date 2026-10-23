@@ -24,10 +24,10 @@
     <string name="action_cancel">取消</string>
 
     <string name="app_summary_disabled">已关闭</string>
-    <string name="app_summary_multiply">×%1$s · 上限 %2$s</string>
-    <string name="app_summary_add">+%1$s · 上限 %2$s</string>
-    <string name="app_summary_auto">自动 +%1$s · 上限 %2$s</string>
-    <string name="app_summary_replace">固定 %1$s · 上限 %2$s</string>
+    <string name="app_summary_multiply">×%1$s</string>
+    <string name="app_summary_add">+%1$s</string>
+    <string name="app_summary_auto">自动 +%1$s</string>
+    <string name="app_summary_replace">固定 %1$s</string>
 
     <!-- Settings -->
     <string name="settings_title">设置</string>
@@ -60,6 +60,7 @@
     <string name="preview_target">按实际 %1$s 步计算 → %2$s 步</string>
     <string name="preview_auto">每次回调 +%1$s 步，累计 %2$s 后重置</string>
     <string name="preview_replace">固定返回 %1$s 步</string>
+    <string name="preview_capped">超出每日上限时封顶</string>
 
     <string name="preset_multiply">×%1$s</string>
     <string name="preset_value">%1$s</string>
@@ -124,7 +125,7 @@
     <string name="mode_replace_desc">始终返回设定值。微信运动按增量同步时固定值可能不生效，建议优先用倍率或增加。</string>
     <string name="label_max_steps">每日上限</string>
     <string name="label_max_steps_base">基础上限</string>
-    <string name="max_steps_effective_hint">今天实际生效 %1$s 步（基础上限 + 每日随机 0–100 步）</string>
+    <string name="max_steps_effective_hint">今日生效值 = 基础上限 + 每日随机 0–100 步</string>
 
     <!-- Language -->
     <string name="language_title">语言</string>

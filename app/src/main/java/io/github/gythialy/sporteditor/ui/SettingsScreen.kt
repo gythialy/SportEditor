@@ -280,28 +280,37 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
             },
             headlineContent = { Text(stringResource(R.string.update_title)) },
             supportingContent = {
-                Text(stringResource(R.string.update_current, BuildConfig.VERSION_NAME))
-            },
-            trailingContent = {
-                TextButton(
-                    onClick = onCheckUpdate,
-                    enabled = !updateState.checking
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        stringResource(
-                            if (updateState.checking) R.string.update_checking else R.string.update_check
-                        )
-                    )
-                }
+                // The action lives on its own line below: a trailing button takes about half the row
+                // width in English, which used to squeeze this line into three.
+                Text(
+                    text = stringResource(R.string.update_current, BuildConfig.VERSION_NAME),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
         )
+
+        TextButton(
+            onClick = onCheckUpdate,
+            enabled = !updateState.checking,
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = Modifier
+                .padding(start = 48.dp)
+                .padding(bottom = 4.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                stringResource(
+                    if (updateState.checking) R.string.update_checking else R.string.update_check
+                )
+            )
+        }
 
         val update = updateState.update
         when {
