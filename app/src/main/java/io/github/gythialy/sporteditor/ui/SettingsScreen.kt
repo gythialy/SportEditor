@@ -1,100 +1,90 @@
 package io.github.gythialy.sporteditor.ui
 
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.RestartAlt
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.gythialy.sporteditor.BuildConfig
 import io.github.gythialy.sporteditor.R
-import io.github.gythialy.sporteditor.data.AppTarget
-import io.github.gythialy.sporteditor.data.SettingsState
-import io.github.gythialy.sporteditor.data.StepMode
-import io.github.gythialy.sporteditor.data.TargetSettings
-import java.text.NumberFormat
-import kotlinx.coroutines.launch
+import io.github.gythialy.sporteditor.ui.theme.cardContainerColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    state: SettingsState,
-    onEnabledChange: (AppTarget, Boolean) -> Unit,
-    onModeChange: (AppTarget, StepMode) -> Unit,
-    onValueChange: (AppTarget, Int) -> Unit,
-    onMaxStepsChange: (AppTarget, Int) -> Unit,
-    onResetTarget: (AppTarget) -> Unit,
-    onOpenSettings: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
+    updateState: UpdateUiState,
+    onCheckUpdate: () -> Unit,
+    onOpenRelease: (String) -> Unit,
+    onOpenDiagnostics: () -> Unit,
+    onOpenUrl: (String) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    IconButton(onClick = onOpenSettings) {
+            TopAppBar(
+                title = { Text(stringResource(R.string.settings_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.settings_title)
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.action_back)
                         )
                     }
                 }
@@ -104,572 +94,296 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .imePadding(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(innerPadding),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { ServiceStatusCard(state) }
+            item { SectionLabel(R.string.section_general) }
+            item {
+                SettingsGroup {
+                    SettingsRow(
+                        icon = Icons.Filled.Language,
+                        title = stringResource(R.string.language_title),
+                        subtitle = stringResource(language.labelRes),
+                        onClick = { showLanguageDialog = true }
+                    )
+                    RowDivider()
+                    SettingsRow(
+                        icon = Icons.Filled.Palette,
+                        title = stringResource(R.string.theme_title),
+                        subtitle = stringResource(themeMode.labelRes),
+                        onClick = { showThemeDialog = true }
+                    )
+                    RowDivider()
+                    UpdateRow(
+                        updateState = updateState,
+                        onCheckUpdate = onCheckUpdate,
+                        onOpenRelease = onOpenRelease
+                    )
+                    RowDivider()
+                    SettingsRow(
+                        icon = Icons.Filled.BugReport,
+                        title = stringResource(R.string.debug_title),
+                        subtitle = stringResource(R.string.debug_desc),
+                        onClick = onOpenDiagnostics
+                    )
+                }
+            }
 
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = stringResource(R.string.section_apps),
-                        style = MaterialTheme.typography.titleMedium
+                SectionLabel(
+                    labelRes = R.string.about_title,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+            item {
+                SettingsGroup {
+                    SettingsRow(
+                        icon = Icons.AutoMirrored.Filled.OpenInNew,
+                        title = stringResource(R.string.about_homepage),
+                        subtitle = HOMEPAGE_URL,
+                        onClick = { onOpenUrl(HOMEPAGE_URL) }
                     )
-                    Text(
-                        text = stringResource(R.string.section_apps_desc),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    RowDivider()
+                    SettingsRow(
+                        icon = Icons.Filled.Description,
+                        title = stringResource(R.string.about_license),
+                        subtitle = "MIT",
+                        onClick = { onOpenUrl(LICENSE_URL) }
                     )
-                }
-            }
-
-            items(AppTarget.entries.toList(), key = { it.key }) { target ->
-                val iconState = rememberAppIcon(target)
-                val label = stringResource(target.labelRes())
-                val resetDone = stringResource(R.string.action_reset_target_done, label)
-                TargetCard(
-                    target = target,
-                    iconState = iconState,
-                    settings = state.settingsFor(target),
-                    onEnabledChange = { onEnabledChange(target, it) },
-                    onModeChange = { onModeChange(target, it) },
-                    onValueChange = { onValueChange(target, it) },
-                    onMaxStepsChange = { onMaxStepsChange(target, it) },
-                    onReset = {
-                        onResetTarget(target)
-                        scope.launch { snackbarHostState.showSnackbar(resetDone) }
-                    }
-                )
-            }
-
-            item { Footer() }
-        }
-    }
-}
-
-@Composable
-private fun ServiceStatusCard(state: SettingsState) {
-    val connected = state.connected
-    val containerColor = if (connected) {
-        MaterialTheme.colorScheme.secondaryContainer
-    } else {
-        MaterialTheme.colorScheme.errorContainer
-    }
-    val contentColor = if (connected) {
-        MaterialTheme.colorScheme.onSecondaryContainer
-    } else {
-        MaterialTheme.colorScheme.onErrorContainer
-    }
-
-    Card(colors = CardDefaults.cardColors(containerColor = containerColor)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = if (connected) Icons.Filled.CheckCircle else Icons.Filled.Warning,
-                    contentDescription = null,
-                    tint = contentColor
-                )
-                Text(
-                    text = stringResource(
-                        if (connected) R.string.status_connected else R.string.status_disconnected
-                    ),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = contentColor
-                )
-            }
-
-            if (connected && state.frameworkName != null) {
-                Text(
-                    text = stringResource(
-                        R.string.status_connected_detail,
-                        state.frameworkName,
-                        state.frameworkVersion ?: "-",
-                        state.apiVersion ?: 0
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.status_disconnected_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor
-                )
-                Text(
-                    text = stringResource(R.string.status_not_synced),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TargetCard(
-    target: AppTarget,
-    iconState: AppIconState,
-    settings: TargetSettings,
-    onEnabledChange: (Boolean) -> Unit,
-    onModeChange: (StepMode) -> Unit,
-    onValueChange: (Int) -> Unit,
-    onMaxStepsChange: (Int) -> Unit,
-    onReset: () -> Unit
-) {
-    val appLabel = stringResource(target.labelRes())
-    val toggleDescription = stringResource(R.string.toggle_app, appLabel)
-    var showResetDialog by rememberSaveable { mutableStateOf(false) }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AppIcon(target = target, state = iconState)
-
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = appLabel,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = stringResource(R.string.module_package_label, target.packageName),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (!iconState.installed) {
-                        Text(
-                            text = stringResource(R.string.app_not_installed),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-
-                Switch(
-                    checked = settings.enabled,
-                    onCheckedChange = onEnabledChange,
-                    modifier = Modifier.semantics { contentDescription = toggleDescription }
-                )
-            }
-
-            if (settings.enabled) {
-                ModeSelector(
-                    target = target,
-                    mode = settings.mode,
-                    onModeChange = onModeChange
-                )
-                StepEditor(
-                    settings = settings,
-                    onValueChange = onValueChange,
-                    onMaxStepsChange = onMaxStepsChange
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = { showResetDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.RestartAlt,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.action_reset))
-                    }
-                }
-            }
-        }
-    }
-
-    if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text(stringResource(R.string.action_reset)) },
-            text = { Text(stringResource(R.string.action_reset_confirm, appLabel)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showResetDialog = false
-                        onReset()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.RestartAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_reset_confirm_action))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
-                    Text(stringResource(R.string.action_cancel))
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun ModeSelector(target: AppTarget, mode: StepMode, onModeChange: (StepMode) -> Unit) {
-    var showHelp by remember { mutableStateOf(false) }
-    val helpDescriptions = StepMode.entries.map { item ->
-        stringResource(item.labelRes()) + "：" + stringResource(item.descRes())
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.label_mode),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            TextButton(onClick = { showHelp = true }) {
-                Text(stringResource(R.string.mode_help))
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            StepMode.entries.forEach { item ->
-                FilterChip(
-                    selected = item == mode,
-                    onClick = { onModeChange(item) },
-                    // WeRun syncs increments; a constant fixed value cannot work there.
-                    enabled = !(target == AppTarget.WECHAT && item == StepMode.REPLACE),
-                    label = { Text(stringResource(item.labelRes())) }
-                )
-            }
-        }
-        Text(
-            text = stringResource(mode.descRes()),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-
-    if (showHelp) {
-        AlertDialog(
-            onDismissRequest = { showHelp = false },
-            title = { Text(stringResource(R.string.mode_help_title)) },
-            text = { Text(helpDescriptions.joinToString("\n\n")) },
-            confirmButton = {
-                TextButton(onClick = { showHelp = false }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun StepEditor(settings: TargetSettings, onValueChange: (Int) -> Unit, onMaxStepsChange: (Int) -> Unit) {
-    val maxValue = TargetSettings.maxValueFor(settings.mode)
-    val step = stepSize(settings.mode)
-    var text by rememberSaveable { mutableStateOf(settings.value.toString()) }
-    var dirty by rememberSaveable { mutableStateOf(false) }
-    var focused by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-    val decreaseDescription = stringResource(R.string.step_decrease)
-    val increaseDescription = stringResource(R.string.step_increase)
-
-    // Reflect external changes (reset, mode switch, remote edits) unless the user is editing.
-    LaunchedEffect(settings.value, focused) {
-        if (!focused && !dirty) text = settings.value.toString()
-    }
-    LaunchedEffect(settings.mode) {
-        text = settings.value.toString()
-        dirty = false
-    }
-
-    val parsed = text.toIntOrNull()
-    val isError = parsed == null || parsed < TargetSettings.MIN_VALUE || parsed > maxValue
-
-    val baseValue = text.toIntOrNull()
-        ?.takeIf { it in TargetSettings.MIN_VALUE..maxValue }
-        ?: settings.value
-
-    val commit: () -> Unit = {
-        val value = text.toIntOrNull()
-        if (value != null && value in TargetSettings.MIN_VALUE..maxValue) {
-            if (value != settings.value) onValueChange(value)
-            text = value.toString()
-        } else {
-            text = settings.value.toString()
-        }
-        dirty = false
-    }
-
-    val applyValue: (Int) -> Unit = { candidate ->
-        val clamped = TargetSettings.clamp(settings.mode, candidate)
-        text = clamped.toString()
-        dirty = false
-        if (clamped != settings.value) onValueChange(clamped)
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilledTonalIconButton(
-                onClick = { applyValue(baseValue - step) },
-                enabled = baseValue > TargetSettings.MIN_VALUE,
-                modifier = Modifier.semantics { contentDescription = decreaseDescription }
-            ) {
-                Text(text = "\u2212", style = MaterialTheme.typography.titleLarge)
-            }
-
-            OutlinedTextField(
-                value = text,
-                onValueChange = { input ->
-                    text = input.filter { it in '0'..'9' }.take(7)
-                    dirty = true
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .onFocusChanged { focusState ->
-                        if (!focusState.isFocused && focused) {
-                            if (dirty) commit() else text = settings.value.toString()
-                        }
-                        focused = focusState.isFocused
-                    },
-                label = { Text(stringResource(R.string.label_value)) },
-                suffix = { Text(stringResource(settings.mode.unitRes())) },
-                supportingText = if (isError) {
-                    {
-                        Text(
-                            text = stringResource(
-                                R.string.invalid_value,
-                                TargetSettings.MIN_VALUE,
-                                maxValue
+                    RowDivider()
+                    ListItem(
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Filled.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
                             )
-                        )
-                    }
-                } else {
-                    null
-                },
-                isError = isError,
-                singleLine = true,
-                textStyle = MaterialTheme.typography.titleMedium.copy(textAlign = TextAlign.Center),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        commit()
-                        focusManager.clearFocus()
-                    }
-                )
-            )
-
-            FilledTonalIconButton(
-                onClick = { applyValue(baseValue + step) },
-                enabled = baseValue < maxValue,
-                modifier = Modifier.semantics { contentDescription = increaseDescription }
-            ) {
-                Text(text = "+", style = MaterialTheme.typography.titleLarge)
+                        },
+                        headlineContent = { Text(stringResource(R.string.settings_version)) },
+                        supportingContent = {
+                            Text(
+                                "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+                }
             }
         }
+    }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            presetsFor(settings.mode).forEach { preset ->
-                SuggestionChip(
-                    onClick = { applyValue(preset) },
-                    label = { Text(presetLabel(settings.mode, preset)) }
-                )
+    if (showThemeDialog) {
+        ChoiceDialog(
+            title = stringResource(R.string.theme_title),
+            options = ThemeMode.entries,
+            selected = themeMode,
+            labelFor = { stringResource(it.labelRes) },
+            onDismiss = { showThemeDialog = false },
+            onSelect = { option ->
+                showThemeDialog = false
+                if (option != themeMode) onThemeModeChange(option)
             }
-        }
-
-        Text(
-            text = previewText(settings.mode, settings.value, settings.maxSteps),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
 
-        MaxStepsField(
-            maxSteps = settings.maxSteps,
-            onMaxStepsChange = onMaxStepsChange
+    if (showLanguageDialog) {
+        ChoiceDialog(
+            title = stringResource(R.string.language_title),
+            options = AppLanguage.entries,
+            selected = language,
+            labelFor = { stringResource(it.labelRes) },
+            onDismiss = { showLanguageDialog = false },
+            onSelect = { option ->
+                showLanguageDialog = false
+                if (option != language) onLanguageChange(option)
+            }
         )
     }
 }
 
 @Composable
-private fun MaxStepsField(maxSteps: Int, onMaxStepsChange: (Int) -> Unit) {
-    var text by rememberSaveable { mutableStateOf(maxSteps.toString()) }
-    var dirty by rememberSaveable { mutableStateOf(false) }
-    var focused by remember { mutableStateOf(false) }
-    val focusManager = LocalFocusManager.current
-    val upperBound = TargetSettings.MAX_VALUE
-
-    LaunchedEffect(maxSteps, focused) {
-        if (!focused && !dirty) text = maxSteps.toString()
-    }
-
-    val parsed = text.toIntOrNull()
-    val isError = parsed == null || parsed < TargetSettings.MIN_MAX_STEPS || parsed > upperBound
-
-    val commit: () -> Unit = {
-        val value = text.toIntOrNull()
-        if (value != null && value in TargetSettings.MIN_MAX_STEPS..upperBound) {
-            if (value != maxSteps) onMaxStepsChange(value)
-            text = value.toString()
-        } else {
-            text = maxSteps.toString()
-        }
-        dirty = false
-    }
-
-    OutlinedTextField(
-        value = text,
-        onValueChange = { input ->
-            text = input.filter { it in '0'..'9' }.take(7)
-            dirty = true
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .onFocusChanged { focusState ->
-                if (!focusState.isFocused && focused) {
-                    if (dirty) commit() else text = maxSteps.toString()
-                }
-                focused = focusState.isFocused
-            },
-        label = { Text(stringResource(R.string.label_max_steps)) },
-        suffix = { Text(stringResource(R.string.unit_steps)) },
-        supportingText = {
-            Text(
-                text = if (isError) {
-                    stringResource(
-                        R.string.invalid_value,
-                        TargetSettings.MIN_MAX_STEPS,
-                        upperBound
-                    )
-                } else {
-                    stringResource(R.string.max_steps_hint)
-                }
-            )
-        },
-        isError = isError,
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Done
-        ),
-        keyboardActions = KeyboardActions(
-            onDone = {
-                commit()
-                focusManager.clearFocus()
-            }
-        )
+private fun SectionLabel(labelRes: Int, modifier: Modifier = Modifier) {
+    Text(
+        text = stringResource(labelRes),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(start = 4.dp, bottom = 2.dp)
     )
 }
 
 @Composable
-private fun previewText(mode: StepMode, value: Int, maxSteps: Int): String {
-    val sampleSteps = 1_000
-    val result = when (mode) {
-        StepMode.MULTIPLY -> (sampleSteps.toLong() * value)
-            .coerceAtMost(TargetSettings.MAX_VALUE.toLong())
-            .toInt()
-
-        StepMode.ADD -> (sampleSteps.toLong() + value)
-            .coerceAtMost(TargetSettings.MAX_VALUE.toLong())
-            .toInt()
-
-        StepMode.REPLACE -> value
-
-        StepMode.AUTO -> 0
-    }.coerceAtMost(maxSteps)
-    return when (mode) {
-        StepMode.MULTIPLY, StepMode.ADD -> stringResource(
-            R.string.preview_target,
-            formatNumber(sampleSteps),
-            formatNumber(result)
-        )
-
-        StepMode.AUTO -> stringResource(
-            R.string.preview_auto,
-            formatNumber(value),
-            formatNumber(TargetSettings.AUTO_CAP)
-        )
-
-        StepMode.REPLACE -> stringResource(R.string.preview_replace, formatNumber(value))
-    }
-}
-
-@Composable
-private fun presetLabel(mode: StepMode, value: Int): String = if (mode == StepMode.MULTIPLY) {
-    stringResource(R.string.preset_multiply, formatNumber(value))
-} else {
-    stringResource(R.string.preset_value, formatNumber(value))
-}
-
-private fun stepSize(mode: StepMode): Int = if (mode == StepMode.MULTIPLY) 10 else 1_000
-
-private fun presetsFor(mode: StepMode): List<Int> = when (mode) {
-    StepMode.MULTIPLY -> listOf(10, 50, 100, 500)
-    StepMode.ADD -> listOf(5_000, 10_000, 20_000, 50_000)
-    StepMode.AUTO -> listOf(5_000, 10_000, 20_000)
-    StepMode.REPLACE -> listOf(20_000, 50_000, 80_000)
-}
-
-private fun formatNumber(value: Int): String = NumberFormat.getIntegerInstance().format(value)
-
-@Composable
-private fun Footer() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = cardContainerColor()
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Text(
-            text = stringResource(R.string.footer_scope),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = stringResource(R.string.footer_disclaimer),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = stringResource(R.string.footer_version, BuildConfig.VERSION_NAME),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Column(content = content)
     }
 }
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 56.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+@Composable
+private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
+    ListItem(
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Text(
+                text = subtitle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        trailingContent = {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable(onClick = onClick)
+    )
+}
+
+@Composable
+private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onOpenRelease: (String) -> Unit) {
+    Column {
+        ListItem(
+            leadingContent = {
+                Icon(
+                    imageVector = Icons.Filled.SystemUpdate,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            },
+            headlineContent = { Text(stringResource(R.string.update_title)) },
+            supportingContent = {
+                Text(stringResource(R.string.update_current, BuildConfig.VERSION_NAME))
+            },
+            trailingContent = {
+                TextButton(
+                    onClick = onCheckUpdate,
+                    enabled = !updateState.checking
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        stringResource(
+                            if (updateState.checking) R.string.update_checking else R.string.update_check
+                        )
+                    )
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+        )
+
+        val update = updateState.update
+        when {
+            update != null -> {
+                Column(
+                    modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.update_available, update.version),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    TextButton(
+                        onClick = { onOpenRelease(update.htmlUrl) },
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.update_open))
+                    }
+                }
+            }
+
+            updateState.upToDate -> Text(
+                text = stringResource(R.string.update_up_to_date),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp)
+            )
+
+            updateState.error != null -> Text(
+                text = stringResource(R.string.update_error, updateState.error),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun <T> ChoiceDialog(
+    title: String,
+    options: List<T>,
+    selected: T,
+    labelFor: @Composable (T) -> String,
+    onDismiss: () -> Unit,
+    onSelect: (T) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(option) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = option == selected,
+                            onClick = null
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(labelFor(option))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        }
+    )
+}
+
+private const val HOMEPAGE_URL = "https://github.com/gythialy/SportEditor"
+private const val LICENSE_URL = "https://github.com/gythialy/SportEditor/blob/main/LICENSE"

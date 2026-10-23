@@ -26,7 +26,7 @@ enum class AppLanguage(val tag: String, @StringRes val labelRes: Int) {
  * selected locale before the Compose tree is created.
  */
 object AppLanguageStore {
-    private const val PREFERENCES_NAME = "sporteditor_ui"
+    internal const val PREFERENCES_NAME = "sporteditor_ui"
     private const val KEY_LANGUAGE = "language"
 
     fun load(context: Context): AppLanguage = AppLanguage.fromTag(preferences(context).getString(KEY_LANGUAGE, null))
