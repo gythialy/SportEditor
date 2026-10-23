@@ -1,21 +1,23 @@
 package io.github.gythialy.sporteditor.data
 
 /**
- * How the reported step value is derived from the raw sensor value.
+ * How each day's reported increment is derived from the raw sensor delta.
  *
- * The [storageKey] is persisted in LSPosed remote preferences and therefore must stay stable.
+ * The reported sensor value itself is an absolute counter that continues across days; the
+ * modes only decide how much a single day may add. The [storageKey] is persisted in LSPosed
+ * remote preferences and therefore must stay stable.
  */
 enum class StepMode(val storageKey: String) {
-    /** reported = raw × value */
+    /** 当日增量 = 真实步数增量 × value */
     MULTIPLY("multiply"),
 
-    /** reported = raw + value */
+    /** 当日增量 = 真实步数增量 + value（value 每天只加一次） */
     ADD("add"),
 
-    /** reported = raw + value × callback count */
+    /** 当日增量 = value × 回调次数（每天重新计数） */
     AUTO("auto"),
 
-    /** reported = value */
+    /** 当日增量 = value（当天固定） */
     REPLACE("replace")
     ;
 
