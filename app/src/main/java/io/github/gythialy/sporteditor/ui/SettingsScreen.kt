@@ -279,20 +279,19 @@ private fun TargetCard(
                     onValueChange = onValueChange,
                     onMaxStepsChange = onMaxStepsChange
                 )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(onClick = { showResetDialog = true }) {
-                    Icon(
-                        imageVector = Icons.Filled.RestartAlt,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_reset))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { showResetDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Filled.RestartAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.action_reset))
+                    }
                 }
             }
         }

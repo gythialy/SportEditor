@@ -93,10 +93,10 @@
     <string name="mode_help_title">Strategy help</string>
     <string name="mode_multiply_desc">Real steps × multiplier. Increments scale proportionally; recommended for WeRun.</string>
     <string name="mode_add_desc">Real steps + a fixed offset. Keeps real increments and raises the total.</string>
-    <string name="mode_auto_desc">Adds the configured value per sensor callback, resets after 100,000. Best for Alipay.</string>
+    <string name="mode_auto_desc">Adds the configured value per sensor callback until the daily max is reached, then stops for the rest of the day. Best for Alipay.</string>
     <string name="mode_replace_desc">Always reports the fixed value. WeRun syncs increments, so fixed values often have no effect; prefer Multiply or Add.</string>
 <string name="label_max_steps">Daily max</string>
-    <string name="max_steps_hint">Stops increasing after the cap</string>
+    <string name="max_steps_hint">Stops increasing once the cap is reached (varies by 0-100 steps daily)</string>
 
     <string name="language_title">Language</string>
     <string name="language_desc">Choose the app language. Defaults to Simplified Chinese.</string>
