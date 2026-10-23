@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * Stores the daily baseline in the target app's private preferences.
+ * Stores the per-day accumulation state in the target app's private preferences.
  *
  * A separate preference file is used so the module never touches the host app's own keys.
  * [contextProvider] is evaluated lazily because the framework context is captured after the
@@ -18,10 +18,13 @@ internal class SharedPreferencesDailyStateStore(private val contextProvider: () 
             DailyState(
                 epochDay = prefs.getLong(key + EPOCH_DAY, 0L),
                 baselineRaw = prefs.getFloat(key + BASELINE_RAW, 0f),
+                lastRaw = prefs.getFloat(key + LAST_RAW, prefs.getFloat(key + BASELINE_RAW, 0f)),
+                rawDeltaOffset = prefs.getFloat(key + RAW_DELTA_OFFSET, 0f),
                 dayStartReported = prefs.getFloat(key + DAY_START_REPORTED, 0f),
                 dailyLimit = prefs.getInt(key + DAILY_LIMIT, 0),
                 lastReported = prefs.getFloat(key + LAST_REPORTED, 0f),
-                autoCount = prefs.getInt(key + AUTO_COUNT, 0)
+                autoCount = prefs.getInt(key + AUTO_COUNT, 0),
+                version = prefs.getInt(key + VERSION, 0)
             )
         }.getOrNull()?.takeIf { it.dailyLimit > 0 }
     }
@@ -31,10 +34,13 @@ internal class SharedPreferencesDailyStateStore(private val contextProvider: () 
         prefs.edit()
             .putLong(key + EPOCH_DAY, state.epochDay)
             .putFloat(key + BASELINE_RAW, state.baselineRaw)
+            .putFloat(key + LAST_RAW, state.lastRaw)
+            .putFloat(key + RAW_DELTA_OFFSET, state.rawDeltaOffset)
             .putFloat(key + DAY_START_REPORTED, state.dayStartReported)
             .putInt(key + DAILY_LIMIT, state.dailyLimit)
             .putFloat(key + LAST_REPORTED, state.lastReported)
             .putInt(key + AUTO_COUNT, state.autoCount)
+            .putInt(key + VERSION, state.version)
             .apply()
     }
 
@@ -44,9 +50,12 @@ internal class SharedPreferencesDailyStateStore(private val contextProvider: () 
         const val PREFERENCES_NAME = "sporteditor_daily_state"
         const val EPOCH_DAY = ".epoch_day"
         const val BASELINE_RAW = ".baseline_raw"
+        const val LAST_RAW = ".last_raw"
+        const val RAW_DELTA_OFFSET = ".raw_delta_offset"
         const val DAY_START_REPORTED = ".day_start_reported"
         const val DAILY_LIMIT = ".daily_limit"
         const val LAST_REPORTED = ".last_reported"
         const val AUTO_COUNT = ".auto_count"
+        const val VERSION = ".version"
     }
 }
