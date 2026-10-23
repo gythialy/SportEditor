@@ -15,6 +15,9 @@ class StepTransformerTest {
     private fun transformer(extra: Int = 0, today: LocalDate = LocalDate.of(2026, 10, 22)) =
         StepTransformer(clock = { today }, extraSteps = { extra })
 
+    private fun detector(extra: Int = 0, today: LocalDate = LocalDate.of(2026, 10, 22), store: DailyStateStore? = null) =
+        StepTransformer(clock = { today }, extraSteps = { extra }, store = store, incremental = true)
+
     private class MemoryStore : DailyStateStore {
         var state: DailyState? = null
 
@@ -227,6 +230,52 @@ class StepTransformerTest {
         val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
         // 9_000_000 + 9_000_000 > MAX_VALUE, so the new day restarts the absolute counter.
         assertEquals(0f, second.transform(9_000_000f, config), 0.001f)
+    }
+
+    @Test
+    fun detector_multiply_accumulatesEveryEvent() {
+        val transformer = detector()
+        val config = settings(StepMode.MULTIPLY, 100, maxSteps = 80_000)
+
+        // TYPE_STEP_DETECTOR reports 1.0 per step; the delta is the event count.
+        assertEquals(100f, transformer.transform(1f, config), 0.001f)
+        assertEquals(200f, transformer.transform(1f, config), 0.001f)
+        repeat(798) { transformer.transform(1f, config) }
+        assertEquals(80_000f, transformer.transform(1f, config), 0.001f)
+    }
+
+    @Test
+    fun detector_add_appendsTheOffsetOncePerDay() {
+        val transformer = detector()
+        val config = settings(StepMode.ADD, 80_000)
+
+        assertEquals(80_001f, transformer.transform(1f, config), 0.001f)
+        assertEquals(80_002f, transformer.transform(1f, config), 0.001f)
+    }
+
+    @Test
+    fun detector_auto_ignoresTheEventValue() {
+        val transformer = detector()
+        val config = settings(StepMode.AUTO, 10_000)
+
+        assertEquals(0f, transformer.transform(1f, config), 0.001f)
+        assertEquals(10_000f, transformer.transform(1f, config), 0.001f)
+        assertEquals(20_000f, transformer.transform(1f, config), 0.001f)
+    }
+
+    @Test
+    fun detector_dayRollover_carriesTheAbsoluteCounter() {
+        val store = MemoryStore()
+        var today = LocalDate.of(2026, 10, 22)
+        val config = settings(StepMode.MULTIPLY, 100, maxSteps = 80_000)
+
+        val first = detector(today = today, store = store)
+        assertEquals(100f, first.transform(1f, config), 0.001f)
+        assertEquals(200f, first.transform(1f, config), 0.001f)
+
+        today = today.plusDays(1)
+        val second = detector(today = today, store = store)
+        assertEquals(300f, second.transform(1f, config), 0.001f)
     }
 
     @Test

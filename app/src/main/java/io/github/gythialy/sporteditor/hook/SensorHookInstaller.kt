@@ -213,7 +213,8 @@ internal class SensorHookInstaller(
                 store = SharedPreferencesDailyStateStore(
                     contextProvider = { appContext },
                     key = target.key + "." + type
-                )
+                ),
+                incremental = type == Sensor.TYPE_STEP_DETECTOR
             )
         }
         val raw = values[0]

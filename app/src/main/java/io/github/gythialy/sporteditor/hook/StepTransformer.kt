@@ -26,6 +26,10 @@ import java.time.LocalDate
  *    from zero again (target apps treat that like a sensor reset); this keeps the app's math
  *    inside its own limits.
  *
+ * `TYPE_STEP_DETECTOR` is not a cumulative counter: every event carries `1.0` and means one
+ * step. Set [incremental] for it so each event is added to the day's delta instead of being
+ * compared with a raw baseline.
+ *
  * State is persisted through [DailyStateStore]; states written before daily accumulation
  * (version 0) are migrated on first use so the target app does not see a negative jump.
  * The class is intentionally free of Android dependencies so it can be unit tested.
@@ -33,7 +37,8 @@ import java.time.LocalDate
 internal class StepTransformer(
     private val clock: () -> LocalDate = { LocalDate.now() },
     private val extraSteps: (epochDay: Long) -> Int = DailyLimit::jitter,
-    private val store: DailyStateStore? = null
+    private val store: DailyStateStore? = null,
+    private val incremental: Boolean = false
 ) {
     private var restored = false
     private var needsMigration = false
@@ -70,12 +75,42 @@ internal class StepTransformer(
         val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         dailyLimit = limit
 
+        if (incremental) return transformIncremental(raw, settings, today, limit)
+
         // Only today's raw delta is transformed; lastRaw/baseline keep the day's progress across
         // a reboot without ever re-counting the same steps.
         val rawDelta = (rawDeltaOffset + (raw - baselineRaw)).coerceAtLeast(0f)
         val reported = when (settings.mode) {
             StepMode.MULTIPLY -> clampDaily(rawDelta * settings.value, limit)
             StepMode.ADD -> clampDaily(rawDelta + settings.value, limit)
+            StepMode.REPLACE -> clampDaily(settings.value.toFloat(), limit)
+            StepMode.AUTO -> autoValue(limit, settings)
+        }
+
+        lastRaw = raw
+        lastReported = sanitize(reported)
+        persist()
+        return lastReported
+    }
+
+    /**
+     * `TYPE_STEP_DETECTOR` events are independent steps (value 1.0 each), so they are summed
+     * into the day's delta instead of being differenced against a cumulative baseline.
+     */
+    private fun transformIncremental(raw: Float, settings: TargetSettings, today: LocalDate, limit: Int): Float {
+        if (day != today) {
+            val carried = if (day == null) 0f else lastReported
+            dayStartReported = if (carried + limit <= TargetSettings.MAX_VALUE) carried else 0f
+            rawDeltaOffset = 0f
+            autoCount = 0
+            day = today
+        }
+
+        val delta = rawDeltaOffset + raw.coerceAtLeast(0f)
+        rawDeltaOffset = delta
+        val reported = when (settings.mode) {
+            StepMode.MULTIPLY -> clampDaily(delta * settings.value, limit)
+            StepMode.ADD -> clampDaily(delta + settings.value, limit)
             StepMode.REPLACE -> clampDaily(settings.value.toFloat(), limit)
             StepMode.AUTO -> autoValue(limit, settings)
         }
