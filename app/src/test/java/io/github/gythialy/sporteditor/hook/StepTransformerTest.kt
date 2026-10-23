@@ -93,6 +93,31 @@ class StepTransformerTest {
     }
 
     @Test
+    fun maxSteps_capsTheAbsoluteReportedValue() {
+        val today = LocalDate.of(2026, 10, 22)
+        val transformer = StepTransformer(clock = { today }, extraSteps = { 0 })
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
+
+        // Below the cap the real value passes through; at or above it the report is clamped.
+        assertEquals(30_000f, transformer.transform(30_000f, config), 0.001f)
+        assertEquals(50_000f, transformer.transform(60_000f, config), 0.001f)
+        assertEquals(50_000f, transformer.transform(120_000f, config), 0.001f)
+    }
+
+    @Test
+    fun loweringMaxSteps_stopsGrowthImmediately() {
+        val today = LocalDate.of(2026, 10, 22)
+        val transformer = StepTransformer(clock = { today }, extraSteps = { 0 })
+        val original = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
+        val lowered = settings(StepMode.MULTIPLY, 1, maxSteps = 30_000)
+
+        assertEquals(50_000f, transformer.transform(60_000f, original), 0.001f)
+        // The user lowers the cap mid-day: further reports do not exceed the new value.
+        assertEquals(30_000f, transformer.transform(90_000f, lowered), 0.001f)
+        assertEquals(30_000f, transformer.transform(150_000f, lowered), 0.001f)
+    }
+
+    @Test
     fun dailyLimit_isMaxStepsPlusUpTo100() {
         val transformer = transformer(extra = 42)
         val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
@@ -111,9 +136,8 @@ class StepTransformerTest {
         assertEquals(80_010f, transformer.transform(100_000f, config), 0.001f)
 
         today = today.plusDays(1)
-        // A new day starts from the previous report; today's budget is 80_000 + 90.
-        assertEquals(80_010f, transformer.transform(100_000f, config), 0.001f)
-        assertEquals(160_100f, transformer.transform(180_090f, config), 0.001f)
+        // A new day restarts from zero; today's budget is 80_000 + 90.
+        assertEquals(80_090f, transformer.transform(100_000f, config), 0.001f)
     }
 
     @Test
@@ -125,6 +149,15 @@ class StepTransformerTest {
     }
 
     @Test
+    fun newDay_resetsTheReportedValueToZero() {
+        val today = LocalDate.of(2026, 10, 22)
+        val transformer = StepTransformer(clock = { today + java.time.Period.ofDays(0) }, extraSteps = { 0 })
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
+
+        assertEquals(50_000f, transformer.transform(80_000f, config), 0.001f)
+    }
+
+    @Test
     fun state_survivesProcessRestart() {
         val store = MemoryStore()
         val today = LocalDate.of(2026, 10, 22)
@@ -132,27 +165,26 @@ class StepTransformerTest {
 
         val first = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
         assertEquals(80_000f, first.transform(100_000f, config), 0.001f)
-        assertEquals(160_000f, first.transform(180_000f, config), 0.001f)
 
-        // A new process restores the day's baseline and keeps the same daily budget.
+        // A new process restores the day's baseline and keeps the cap enforced.
         val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
-        assertEquals(160_000f, second.transform(190_000f, config), 0.001f)
+        assertEquals(80_000f, second.transform(190_000f, config), 0.001f)
     }
 
     @Test
-    fun dayRollover_usesPersistedLastReportedValue() {
+    fun dayRollover_restartsFromZero() {
         val store = MemoryStore()
         var today = LocalDate.of(2026, 10, 22)
         val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
 
         val first = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
         assertEquals(80_000f, first.transform(100_000f, config), 0.001f)
-        assertEquals(160_000f, first.transform(180_000f, config), 0.001f)
 
         today = today.plusDays(1)
+        // Yesterday's total must not carry over; the new day counts from zero again.
         val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
-        assertEquals(160_000f, second.transform(190_000f, config), 0.001f)
-        assertEquals(230_000f, second.transform(260_000f, config), 0.001f)
+        assertEquals(80_000f, second.transform(100_000f, config), 0.001f)
+        assertEquals(80_000f, second.transform(260_000f, config), 0.001f)
     }
 
     @Test

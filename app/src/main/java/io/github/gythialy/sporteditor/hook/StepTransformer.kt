@@ -13,10 +13,11 @@ import kotlin.random.Random
  *
  *  - On the first event, a new day, or when the raw counter moves backwards (device reboot),
  *    the current raw value becomes the day's baseline.
- *  - For MULTIPLY/ADD, only the raw delta is applied, so [TargetSettings.maxSteps] limits
- *    *today's* steps instead of the absolute sensor value.
- *  - The daily limit is [TargetSettings.maxSteps] plus a per-day random value in 0..100;
- *    REPLACE/AUTO are capped at that limit.
+ *  - [TargetSettings.maxSteps] is the total reported value the target app may see for today,
+ *    so every mode is capped by that absolute limit, not by an accumulated delta.
+ *  - The daily limit is [TargetSettings.maxSteps] plus a per-day random value in 0..100.
+ *    Lowering the limit mid-day takes effect immediately: the report stops growing at the
+ *    new cap instead of staying at the already-breached value.
  *
  * The class is intentionally free of Android dependencies so it can be unit tested.
  */
@@ -50,23 +51,26 @@ internal class StepTransformer(
             beginDay(today, raw, settings, counterReset)
         }
 
+        // The daily limit can shrink at any time (the user lowers TargetSettings.maxSteps, or
+        // the day's random jitter differs). Keep the persisted budget only when it is not
+        // larger than today's budget, so an already-breached cap stops immediately instead of
+        // staying at the old value for the rest of the day.
+        val todayLimit = (settings.maxSteps + extraSteps(today.toEpochDay()))
+            .coerceIn(1, TargetSettings.MAX_VALUE)
+        if (todayLimit != dailyLimit) {
+            dailyLimit = todayLimit
+        }
+
         val reported = when (settings.mode) {
-            StepMode.MULTIPLY ->
-                dayStartReported + (raw - baselineRaw).coerceAtLeast(0f) * settings.value
-
-            StepMode.ADD -> dayStartReported + (raw - baselineRaw).coerceAtLeast(0f)
-
+            StepMode.MULTIPLY -> raw * settings.value
+            StepMode.ADD -> raw + settings.value
             StepMode.REPLACE -> settings.value.toFloat()
-
             StepMode.AUTO -> autoValue(raw, settings)
         }
 
-        // MULTIPLY/ADD accumulate a daily delta on top of the previous report; REPLACE/AUTO
-        // keep their absolute value and are only capped at the daily limit.
-        val capped = when (settings.mode) {
-            StepMode.MULTIPLY, StepMode.ADD -> reported.coerceAtMost(dayStartReported + dailyLimit)
-            StepMode.REPLACE, StepMode.AUTO -> reported.coerceAtMost(dailyLimit.toFloat())
-        }
+        // maxSteps is the total reported value the target app may see for today, so every mode
+        // is capped by the absolute daily limit rather than an accumulated delta.
+        val capped = reported.coerceAtMost(dailyLimit.toFloat())
 
         lastReported = sanitize(capped)
         persist()
@@ -103,22 +107,12 @@ internal class StepTransformer(
         dailyLimit = (settings.maxSteps + extraSteps(today.toEpochDay()))
             .coerceIn(1, TargetSettings.MAX_VALUE)
 
-        val firstOrReset = day == null || counterReset
+        // Track the raw value so a reboot (counter rolling back) can be detected. The daily
+        // cap itself is absolute: the target app never sees more than dailyLimit today.
         baselineRaw = raw
-        dayStartReported = if (firstOrReset) {
-            nominal(raw, settings).coerceIn(0f, dailyLimit.toFloat())
-        } else {
-            lastReported
-        }
+        dayStartReported = 0f
         day = today
         autoCount = 0
-    }
-
-    private fun nominal(raw: Float, settings: TargetSettings): Float = when (settings.mode) {
-        StepMode.MULTIPLY -> raw * settings.value
-        StepMode.ADD -> raw + settings.value
-        StepMode.REPLACE -> settings.value.toFloat()
-        StepMode.AUTO -> raw
     }
 
     private fun autoValue(raw: Float, settings: TargetSettings): Float {

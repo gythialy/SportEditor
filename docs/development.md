@@ -26,6 +26,8 @@
   Remote Preferences；目标进程用 `getRemotePreferences()` 读取并注册变更监听，
   在进程运行/解冻时应用新配置。
 - 步数计算集中在纯 Kotlin 的 `StepTransformer`，不依赖 Android，便于 JVM 单元测试。
+- `maxSteps` 限制目标应用当日能看到的上报值（绝对值封顶），达到后当天不再增长；每天额外
+  浮动 0–100 步。中途调低上限会立即生效，不会因为已经超过旧上限而继续累加。
 - 每日基线与当日上限通过 `DailyStateStore` 持久化到目标应用的私有
   `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计。
 - 所有应用默认关闭；微信的固定值模式会被 `AppTarget.sanitize()` 回退为默认倍率模式，
@@ -35,7 +37,7 @@
 - `UpdateChecker` 通过 GitHub Releases API 检查新版本（需要 `INTERNET` 权限），由设置页手动触发；
   版本比较由纯 Kotlin 的 `VersionComparator` 完成。
 - 主界面只保留应用配置与设置入口；语言、版本更新、诊断与关于信息集中在设置页。
-- 每个应用卡片可单独重置为默认值（二次确认），不存在全局重置。
+- 每个应用卡片在启用后可单独重置为默认值（二次确认），不存在全局重置。
 
 ## 目录结构
 
@@ -80,7 +82,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 ## 测试
 
-- JVM 单元测试：35 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
+- JVM 单元测试：38 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```
