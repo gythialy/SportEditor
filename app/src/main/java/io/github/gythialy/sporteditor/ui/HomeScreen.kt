@@ -66,6 +66,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -335,8 +336,17 @@ private fun AppCard(
     val switchDescription = stringResource(R.string.toggle_app, label)
     var showResetDialog by rememberSaveable { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
-    val effectiveLimit = DailyLimit.effectiveToday(settings.maxSteps)
-    val summary = summaryText(settings, effectiveLimit)
+    // Draft typed into the daily-max field. It drives every displayed number immediately, while the
+    // preference itself is written once the edit settles (debounce, IME done, focus loss or collapse).
+    var draftMaxSteps by remember { mutableStateOf<Int?>(null) }
+    val pendingMaxSteps = draftMaxSteps?.takeIf { it != settings.maxSteps }
+    val effectiveLimit = DailyLimit.effectiveToday(pendingMaxSteps ?: settings.maxSteps)
+    val summary = summaryText(settings)
+
+    // Drop a stale draft when the stored value changed elsewhere (reset action, remote edit).
+    LaunchedEffect(settings.maxSteps) {
+        if (draftMaxSteps != null && draftMaxSteps != settings.maxSteps) draftMaxSteps = null
+    }
 
     Card(
         onClick = { onExpandChange(!expanded) },
@@ -379,6 +389,9 @@ private fun AppCard(
                     ) {
                         Text(
                             text = summary,
+                            // The "not installed" badge is measured first, so a long summary is
+                            // ellipsized instead of pushing the badge out of the row.
+                            modifier = Modifier.weight(1f, fill = false),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -446,7 +459,8 @@ private fun AppCard(
                         settings = settings,
                         effectiveLimit = effectiveLimit,
                         onValueChange = onValueChange,
-                        onMaxStepsChange = onMaxStepsChange
+                        onMaxStepsChange = onMaxStepsChange,
+                        onDraftMaxStepsChange = { draftMaxSteps = it }
                     )
                 }
             }
@@ -484,15 +498,14 @@ private fun AppCard(
 }
 
 @Composable
-private fun summaryText(settings: TargetSettings, effectiveLimit: Int): String {
+private fun summaryText(settings: TargetSettings): String {
     if (!settings.enabled) return stringResource(R.string.app_summary_disabled)
     val value = formatNumber(settings.value)
-    val limit = formatNumber(effectiveLimit)
     return when (settings.mode) {
-        StepMode.MULTIPLY -> stringResource(R.string.app_summary_multiply, value, limit)
-        StepMode.ADD -> stringResource(R.string.app_summary_add, value, limit)
-        StepMode.AUTO -> stringResource(R.string.app_summary_auto, value, limit)
-        StepMode.REPLACE -> stringResource(R.string.app_summary_replace, value, limit)
+        StepMode.MULTIPLY -> stringResource(R.string.app_summary_multiply, value)
+        StepMode.ADD -> stringResource(R.string.app_summary_add, value)
+        StepMode.AUTO -> stringResource(R.string.app_summary_auto, value)
+        StepMode.REPLACE -> stringResource(R.string.app_summary_replace, value)
     }
 }
 
@@ -567,7 +580,13 @@ private fun ModeSelector(target: AppTarget, mode: StepMode, onModeChange: (StepM
 }
 
 @Composable
-private fun StepEditor(settings: TargetSettings, effectiveLimit: Int, onValueChange: (Int) -> Unit, onMaxStepsChange: (Int) -> Unit) {
+private fun StepEditor(
+    settings: TargetSettings,
+    effectiveLimit: Int,
+    onValueChange: (Int) -> Unit,
+    onMaxStepsChange: (Int) -> Unit,
+    onDraftMaxStepsChange: (Int?) -> Unit
+) {
     val maxValue = TargetSettings.maxValueFor(settings.mode)
     val step = stepSize(settings.mode)
     var text by rememberSaveable { mutableStateOf(settings.value.toString()) }
@@ -700,6 +719,7 @@ private fun StepEditor(settings: TargetSettings, effectiveLimit: Int, onValueCha
         MaxStepsSection(
             maxSteps = settings.maxSteps,
             effectiveLimit = effectiveLimit,
+            onDraftMaxStepsChange = onDraftMaxStepsChange,
             onMaxStepsChange = onMaxStepsChange
         )
     }
@@ -765,7 +785,7 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
 }
 
 @Composable
-private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange: (Int) -> Unit) {
+private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onDraftMaxStepsChange: (Int?) -> Unit, onMaxStepsChange: (Int) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
     Column {
@@ -801,7 +821,7 @@ private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange
         ) {
             MaxStepsField(
                 maxSteps = maxSteps,
-                effectiveLimit = effectiveLimit,
+                onDraftChange = onDraftMaxStepsChange,
                 onMaxStepsChange = onMaxStepsChange
             )
         }
@@ -809,29 +829,51 @@ private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange
 }
 
 @Composable
-private fun MaxStepsField(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange: (Int) -> Unit) {
+private fun MaxStepsField(maxSteps: Int, onDraftChange: (Int?) -> Unit, onMaxStepsChange: (Int) -> Unit) {
     var text by rememberSaveable { mutableStateOf(maxSteps.toString()) }
     var dirty by rememberSaveable { mutableStateOf(false) }
     var focused by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
     val upperBound = TargetSettings.MAX_VALUE
 
+    // Reflect external changes (reset, remote edits) unless the user is editing.
     LaunchedEffect(maxSteps, focused) {
         if (!focused && !dirty) text = maxSteps.toString()
     }
 
-    val parsed = text.toIntOrNull()
-    val isError = parsed == null || parsed < TargetSettings.MIN_MAX_STEPS || parsed > upperBound
+    val draftValue = text.toIntOrNull()?.takeIf { it in TargetSettings.MIN_MAX_STEPS..upperBound }
+    val isError = draftValue == null
 
-    val commit: () -> Unit = {
-        val value = text.toIntOrNull()
-        if (value != null && value in TargetSettings.MIN_MAX_STEPS..upperBound) {
-            if (value != maxSteps) onMaxStepsChange(value)
-            text = value.toString()
+    val commit: (String) -> Unit = { raw ->
+        val value = raw.toIntOrNull()
+        val next = if (value != null && value in TargetSettings.MIN_MAX_STEPS..upperBound) {
+            value
         } else {
-            text = maxSteps.toString()
+            maxSteps
         }
+        if (next != maxSteps) onMaxStepsChange(next)
+        text = next.toString()
         dirty = false
+    }
+
+    // The typed value is published as a draft immediately, so the card summary, the preview and the
+    // daily-max row refresh while the user is still typing instead of after the edit is committed.
+    LaunchedEffect(text) { onDraftChange(draftValue) }
+
+    // Persist once the input settles, and flush an unfinished edit when the field leaves composition
+    // (collapsed section, collapsed card or another screen).
+    LaunchedEffect(text, dirty) {
+        if (!dirty) return@LaunchedEffect
+        delay(MAX_STEPS_COMMIT_DELAY_MS)
+        commit(text)
+    }
+    val latestCommit by rememberUpdatedState(commit)
+    val latestDraftChange by rememberUpdatedState(onDraftChange)
+    DisposableEffect(Unit) {
+        onDispose {
+            latestDraftChange(null)
+            if (dirty) latestCommit(text)
+        }
     }
 
     OutlinedTextField(
@@ -844,8 +886,8 @@ private fun MaxStepsField(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange: 
             .fillMaxWidth()
             .padding(bottom = 4.dp)
             .onFocusChanged { focusState ->
-                if (!focusState.isFocused && focused) {
-                    if (dirty) commit() else text = maxSteps.toString()
+                if (!focusState.isFocused && focused && dirty) {
+                    commit(text)
                 }
                 focused = focusState.isFocused
             },
@@ -860,10 +902,7 @@ private fun MaxStepsField(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange: 
                         upperBound
                     )
                 } else {
-                    stringResource(
-                        R.string.max_steps_effective_hint,
-                        formatNumber(effectiveLimit)
-                    )
+                    stringResource(R.string.max_steps_effective_hint)
                 }
             )
         },
@@ -875,7 +914,7 @@ private fun MaxStepsField(maxSteps: Int, effectiveLimit: Int, onMaxStepsChange: 
         ),
         keyboardActions = KeyboardActions(
             onDone = {
-                commit()
+                commit(text)
                 focusManager.clearFocus()
             }
         )
@@ -957,33 +996,34 @@ private fun ConnectionSheet(state: SettingsState, onDismiss: () -> Unit) {
 @Composable
 private fun previewText(mode: StepMode, value: Int, effectiveLimit: Int): String {
     val sampleSteps = 1_000
-    val result = when (mode) {
-        StepMode.MULTIPLY -> (sampleSteps.toLong() * value)
-            .coerceAtMost(effectiveLimit.toLong())
-            .toInt()
-
-        StepMode.ADD -> (sampleSteps.toLong() + value)
-            .coerceAtMost(effectiveLimit.toLong())
-            .toInt()
-
-        StepMode.REPLACE -> value.coerceAtMost(effectiveLimit)
-
-        StepMode.AUTO -> 0
+    if (mode == StepMode.AUTO) {
+        return stringResource(
+            R.string.preview_auto,
+            formatNumber(value),
+            formatNumber(TargetSettings.AUTO_CAP)
+        )
     }
-    return when (mode) {
+
+    // Show what the strategy itself produces; the effective daily limit is displayed once, in the
+    // daily-max section, so capping is only flagged here instead of repeating the number.
+    val result = when (mode) {
+        StepMode.MULTIPLY -> sampleSteps.toLong() * value
+        StepMode.ADD -> sampleSteps.toLong() + value
+        StepMode.REPLACE, StepMode.AUTO -> value.toLong()
+    }
+    val text = when (mode) {
         StepMode.MULTIPLY, StepMode.ADD -> stringResource(
             R.string.preview_target,
             formatNumber(sampleSteps),
             formatNumber(result)
         )
 
-        StepMode.AUTO -> stringResource(
-            R.string.preview_auto,
-            formatNumber(value),
-            formatNumber(TargetSettings.AUTO_CAP)
-        )
-
-        StepMode.REPLACE -> stringResource(R.string.preview_replace, formatNumber(result))
+        StepMode.REPLACE, StepMode.AUTO -> stringResource(R.string.preview_replace, formatNumber(result))
+    }
+    return if (result > effectiveLimit) {
+        text + " · " + stringResource(R.string.preview_capped)
+    } else {
+        text
     }
 }
 
@@ -1003,7 +1043,12 @@ private fun presetsFor(mode: StepMode): List<Int> = when (mode) {
     StepMode.REPLACE -> listOf(20_000, 50_000, 80_000)
 }
 
-private fun formatNumber(value: Int): String = NumberFormat.getIntegerInstance().format(value)
+/** Delay after the last keystroke before the typed daily max is written to the preferences. */
+private const val MAX_STEPS_COMMIT_DELAY_MS = 600L
+
+private fun formatNumber(value: Int): String = formatNumber(value.toLong())
+
+private fun formatNumber(value: Long): String = NumberFormat.getIntegerInstance().format(value)
 
 @Composable
 private fun Footer() {
