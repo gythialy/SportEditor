@@ -19,9 +19,11 @@ import java.time.LocalDate
  *    AUTO adds `value` per callback. The increment is capped by the day's budget.
  *  - The budget is [TargetSettings.maxSteps] plus [DailyLimit]'s per-day jitter (0..100).
  *    Lowering the limit mid-day takes effect immediately: the increment stops at the new cap.
- *  - A rollback of the raw counter (device reboot) is detected when the new reading is below
- *    the last one; today's progress is kept by moving the accumulated raw delta into the
- *    baseline compensation instead of restarting the day.
+ *  - A device reboot is detected through `SystemClock.elapsedRealtime()` (it restarts at zero
+ *    on boot), so the counter baseline is reset to zero and the steps taken since boot are
+ *    counted even when the first event arrives after the raw value already surpassed the last
+ *    reading. A raw rollback without a boot is treated as a sensor reset and rebased to the new
+ *    reading. In both cases today's progress is preserved.
  *  - The absolute counter would reach [MAX_STEPS] after many months, so the next day starts
  *    from zero again (target apps treat that like a sensor reset); this keeps the app's math
  *    inside its own limits.
@@ -38,7 +40,8 @@ internal class StepTransformer(
     private val clock: () -> LocalDate = { LocalDate.now() },
     private val extraSteps: (epochDay: Long) -> Int = DailyLimit::jitter,
     private val store: DailyStateStore? = null,
-    private val incremental: Boolean = false
+    private val incremental: Boolean = false,
+    private val elapsedRealtime: () -> Long = { 0L }
 ) {
     private var restored = false
     private var needsMigration = false
@@ -50,6 +53,7 @@ internal class StepTransformer(
     private var dailyLimit = 0
     private var lastReported = 0f
     private var autoCount = 0
+    private var lastElapsed = 0L
 
     init {
         restore()
@@ -67,9 +71,10 @@ internal class StepTransformer(
         }
 
         val newDay = day != today
+        val rebooted = elapsedRealtime() < lastElapsed
         val counterReset = raw < lastRaw
-        if (newDay || counterReset) {
-            beginPeriod(today, raw, settings, counterReset)
+        if (newDay || counterReset || rebooted) {
+            beginPeriod(today, raw, settings, counterReset = counterReset, rebooted = rebooted)
         }
 
         val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
@@ -88,6 +93,7 @@ internal class StepTransformer(
         }
 
         lastRaw = raw
+        lastElapsed = elapsedRealtime()
         lastReported = sanitize(reported)
         persist()
         return lastReported
@@ -133,6 +139,7 @@ internal class StepTransformer(
         dailyLimit = state.dailyLimit
         lastReported = state.lastReported
         autoCount = state.autoCount
+        lastElapsed = state.lastElapsed
         needsMigration = state.version < STATE_VERSION
     }
 
@@ -149,6 +156,7 @@ internal class StepTransformer(
         dayStartReported = lastReported
         dailyLimit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         autoCount = 0
+        lastElapsed = elapsedRealtime()
         needsMigration = false
         persist()
     }
@@ -165,12 +173,13 @@ internal class StepTransformer(
                 dailyLimit = dailyLimit,
                 lastReported = lastReported,
                 autoCount = autoCount,
-                version = STATE_VERSION
+                version = STATE_VERSION,
+                lastElapsed = lastElapsed
             )
         )
     }
 
-    private fun beginPeriod(today: LocalDate, raw: Float, settings: TargetSettings, counterReset: Boolean) {
+    private fun beginPeriod(today: LocalDate, raw: Float, settings: TargetSettings, counterReset: Boolean, rebooted: Boolean) {
         val startingNewDay = day != today
         if (startingNewDay) {
             val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
@@ -181,13 +190,15 @@ internal class StepTransformer(
             rawDeltaOffset = 0f
             autoCount = 0
             dailyLimit = limit
-        } else if (counterReset) {
-            // Device rebooted (or the counter rolled back) mid-day: keep the steps already
-            // reported today and continue from the new raw baseline.
+        } else if (counterReset || rebooted) {
+            // Keep the steps already reported today, then continue from the new counter origin.
             rawDeltaOffset += (lastRaw - baselineRaw).coerceAtLeast(0f)
         }
-        baselineRaw = raw
+        // On a reboot the step counter restarts at zero, so raw already contains every step since
+        // boot; from a plain sensor rollback the new reading is the safest baseline.
+        baselineRaw = if (rebooted) 0f else raw
         lastRaw = raw
+        lastElapsed = elapsedRealtime()
         day = today
     }
 

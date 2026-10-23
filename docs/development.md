@@ -26,10 +26,17 @@
   Remote Preferences；目标进程用 `getRemotePreferences()` 读取并注册变更监听，
   在进程运行/解冻时应用新配置。
 - 步数计算集中在纯 Kotlin 的 `StepTransformer`，不依赖 Android，便于 JVM 单元测试。
-- `maxSteps` 限制目标应用当日能看到的上报值（绝对值封顶），达到后当天不再增长；每天额外
-  浮动 0–100 步。中途调低上限会立即生效，不会因为已经超过旧上限而继续累加。
-- 每日基线与当日上限通过 `DailyStateStore` 持久化到目标应用的私有
-  `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计。
+- 上报给目标应用的是连续递增的绝对计数，每个本地自然日有独立额度，额度为
+  `maxSteps + 0–100` 随机浮动。每天只转换当日 raw 增量（倍率/增加）、固定值或自动回调，
+  单日增量封顶；跨天时把上一日报值作为新一天起点，目标应用在零点不会看到回跳。中途调低
+  上限会立即生效，不会因为已经超过旧上限而继续累加。
+- `TYPE_STEP_COUNTER` 是开机以来的累计值，系统重启后从 0 重新计数；模块用
+  `SystemClock.elapsedRealtime()` 判定重启，把重启前的当日增量折进基线补偿，重启后的
+  raw 直接计入当天，因此重启不会丢当日进度。`TYPE_STEP_DETECTOR` 每步一个 `1.0` 事件，
+  按事件累加处理。
+- 每日基线、当日额度与重启标记通过 `DailyStateStore` 持久化到目标应用的私有
+  `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计；
+  v1.2 的绝对值状态会在首次使用时迁移，避免负跳变。
 - 所有应用默认关闭；微信的固定值模式会被 `AppTarget.sanitize()` 回退为默认倍率模式，
   因为微信运动按增量同步，固定值无法产生增量。
 - 界面语言由 `AppLanguageStore` 保存在应用私有 SharedPreferences，`MainActivity.attachBaseContext`
@@ -82,7 +89,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 ## 测试
 
-- JVM 单元测试：38 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
+- JVM 单元测试：54 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```

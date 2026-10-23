@@ -24,7 +24,8 @@ internal class SharedPreferencesDailyStateStore(private val contextProvider: () 
                 dailyLimit = prefs.getInt(key + DAILY_LIMIT, 0),
                 lastReported = prefs.getFloat(key + LAST_REPORTED, 0f),
                 autoCount = prefs.getInt(key + AUTO_COUNT, 0),
-                version = prefs.getInt(key + VERSION, 0)
+                version = prefs.getInt(key + VERSION, 0),
+                lastElapsed = prefs.getLong(key + LAST_ELAPSED, 0L)
             )
         }.getOrNull()?.takeIf { it.dailyLimit > 0 }
     }
@@ -41,6 +42,7 @@ internal class SharedPreferencesDailyStateStore(private val contextProvider: () 
             .putFloat(key + LAST_REPORTED, state.lastReported)
             .putInt(key + AUTO_COUNT, state.autoCount)
             .putInt(key + VERSION, state.version)
+            .putLong(key + LAST_ELAPSED, state.lastElapsed)
             .apply()
     }
 
@@ -57,5 +59,6 @@ internal class SharedPreferencesDailyStateStore(private val contextProvider: () 
         const val LAST_REPORTED = ".last_reported"
         const val AUTO_COUNT = ".auto_count"
         const val VERSION = ".version"
+        const val LAST_ELAPSED = ".last_elapsed"
     }
 }

@@ -193,6 +193,51 @@ class StepTransformerTest {
     }
 
     @Test
+    fun reboot_isDetectedWhenRawAlreadyExceedsTheLastReading() {
+        val store = MemoryStore()
+        val today = LocalDate.of(2026, 10, 22)
+        var elapsed = 500_000L
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 0 },
+            store = store,
+            elapsedRealtime = { elapsed }
+        )
+
+        assertEquals(0f, transformer.transform(0f, config), 0.001f)
+        assertEquals(8_000f, transformer.transform(8_000f, config), 0.001f)
+
+        // Reboot with 10_000 steps taken before the first event: elapsedRealtime restarts at
+        // zero, so the reboot is detected even though raw is above the previous reading.
+        elapsed = 1_000L
+        assertEquals(18_000f, transformer.transform(10_000f, config), 0.001f)
+    }
+
+    @Test
+    fun sensorRollbackWithoutReboot_rebasesToTheNewReading() {
+        val store = MemoryStore()
+        val today = LocalDate.of(2026, 10, 22)
+        var elapsed = 100L
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 0 },
+            store = store,
+            elapsedRealtime = { elapsed }
+        )
+
+        assertEquals(0f, transformer.transform(0f, config), 0.001f)
+        assertEquals(8_000f, transformer.transform(8_000f, config), 0.001f)
+
+        // A sensor hiccup rolls the raw value back while the device keeps running: rebase to the
+        // new reading and keep today's progress.
+        elapsed = 200L
+        assertEquals(8_000f, transformer.transform(1_000f, config), 0.001f)
+        assertEquals(9_000f, transformer.transform(2_000f, config), 0.001f)
+    }
+
+    @Test
     fun legacyAbsoluteState_migratesWithoutBackwardJump() {
         val store = MemoryStore()
         val today = LocalDate.of(2026, 10, 22)
@@ -276,6 +321,43 @@ class StepTransformerTest {
         today = today.plusDays(1)
         val second = detector(today = today, store = store)
         assertEquals(300f, second.transform(1f, config), 0.001f)
+    }
+
+    @Test
+    fun simulatedWeekWithReboot_staysMonotonicAndBucketedPerDay() {
+        val store = MemoryStore()
+        var today = LocalDate.of(2026, 10, 22)
+        var raw = 0f
+        var elapsed = 1_000_000L
+        val config = settings(StepMode.MULTIPLY, 2, maxSteps = 50_000)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 0 },
+            store = store,
+            elapsedRealtime = { elapsed }
+        )
+        var last = 0f
+
+        repeat(7) { dayIndex ->
+            val dayStart = last
+            repeat(15) {
+                raw += 500f
+                elapsed += 5_000L
+                val now = transformer.transform(raw, config)
+                assertTrue("absolute value must not decrease", now >= last - 0.001f)
+                assertTrue("day $dayIndex increment ${now - dayStart} exceeds budget", now - dayStart <= 50_000.001f)
+                last = now
+            }
+            val dayIncrement = last - dayStart
+            assertTrue("day $dayIndex made no progress", dayIncrement > 0f)
+            assertTrue("day $dayIndex increment $dayIncrement exceeds budget", dayIncrement <= 30_000.001f)
+            if (dayIndex == 3) {
+                // Reboot overnight: raw and elapsedRealtime restart at zero.
+                raw = 0f
+                elapsed = 0L
+            }
+            today = today.plusDays(1)
+        }
     }
 
     @Test

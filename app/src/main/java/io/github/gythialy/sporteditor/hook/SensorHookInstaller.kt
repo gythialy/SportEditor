@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
+import android.os.SystemClock
 import android.util.Log
 import android.util.SparseArray
 import io.github.gythialy.sporteditor.data.AppTarget
@@ -214,7 +215,8 @@ internal class SensorHookInstaller(
                     contextProvider = { appContext },
                     key = target.key + "." + type
                 ),
-                incremental = type == Sensor.TYPE_STEP_DETECTOR
+                incremental = type == Sensor.TYPE_STEP_DETECTOR,
+                elapsedRealtime = SystemClock::elapsedRealtime
             )
         }
         val raw = values[0]

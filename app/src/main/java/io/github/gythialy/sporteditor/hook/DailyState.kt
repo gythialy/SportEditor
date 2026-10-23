@@ -17,6 +17,8 @@ package io.github.gythialy.sporteditor.hook
  *  - [dailyLimit] is today's budget for the reported increment (base value + jitter).
  *  - [lastReported] is the last transformed value written to the app.
  *  - [autoCount] is the per-day AUTO mode callback counter.
+ *  - [lastElapsed] is `SystemClock.elapsedRealtime()` at the last event; a smaller reading means
+ *    the device rebooted and the step counter restarted at zero.
  *  - [version] marks the state schema; states written before daily accumulation (version 0) are
  *    migrated on first use so the target app does not see a negative jump.
  */
@@ -29,7 +31,8 @@ internal data class DailyState(
     val dailyLimit: Int,
     val lastReported: Float,
     val autoCount: Int,
-    val version: Int = 0
+    val version: Int = 0,
+    val lastElapsed: Long = 0L
 )
 
 /** Persistence boundary for [StepTransformer]; tests use an in-memory implementation. */
