@@ -51,8 +51,8 @@ android {
         applicationId = "io.github.gythialy.sporteditor"
         minSdk = 26
         targetSdk = 37
-        versionCode = 103
-        versionName = "1.3.0"
+        versionCode = 104
+        versionName = "1.3.1"
     }
 
     signingConfigs {
