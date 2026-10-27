@@ -95,7 +95,19 @@
     <string name="debug_type_framework">Framework</string>
     <string name="debug_type_config">Config</string>
     <string name="debug_type_hook">Hook</string>
-    <string name="debug_type_error">Errors</string>
+    <string name="debug_level_info">Info</string>
+    <string name="debug_level_warn">Warning</string>
+    <string name="debug_level_error">Error</string>
+    <string name="debug_filter_enabled">Enabled</string>
+    <string name="debug_filter_uninstalled">Not installed</string>
+    <string name="debug_apps_summary">Enabled %1$d/%2$d · Installed %3$d</string>
+    <string name="debug_search_matches">%1$d matched of %2$d</string>
+    <string name="debug_stats">Stats</string>
+    <string name="debug_env_connected_desc">Framework connected; settings and logs sync in real time.</string>
+    <string name="debug_env_disconnected_desc">Framework not connected; settings are cached locally until reconnect.</string>
+    <string name="debug_search_acd">Search logs</string>
+    <string name="debug_capture_level_acd">Log capture level</string>
+    <string name="debug_clear_search">Clear query</string>
     <string name="debug_copy">Copy</string>
     <string name="debug_share">Share</string>
     <string name="debug_clear">Clear</string>
@@ -116,6 +128,12 @@
     <string name="debug_installed">Installed</string>
     <string name="debug_not_installed">Not installed</string>
     <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
+    <string name="debug_sensor_line">Latest sensor: %1$s · raw %2$s → %3$s · %4$s</string>
+    <string name="debug_sensor_none">No sensor events yet (app silent or disabled)</string>
+    <string name="debug_time_just_now">just now</string>
+    <string name="debug_time_seconds_ago">%1$d s ago</string>
+    <string name="debug_time_minutes_ago">%1$d min ago</string>
+    <string name="debug_time_hours_ago">%1$d h ago</string>
 
     <string name="mode_help">Help</string>
     <string name="mode_help_title">Strategy help</string>

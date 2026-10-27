@@ -95,7 +95,19 @@
     <string name="debug_type_framework">框架</string>
     <string name="debug_type_config">配置</string>
     <string name="debug_type_hook">Hook</string>
-    <string name="debug_type_error">错误</string>
+    <string name="debug_level_info">信息</string>
+    <string name="debug_level_warn">警告</string>
+    <string name="debug_level_error">错误</string>
+    <string name="debug_filter_enabled">已启用</string>
+    <string name="debug_filter_uninstalled">未安装</string>
+    <string name="debug_apps_summary">已启用 %1$d/%2$d · 已安装 %3$d</string>
+    <string name="debug_search_matches">命中 %1$d 条，共 %2$d 条</string>
+    <string name="debug_stats">统计</string>
+    <string name="debug_env_connected_desc">框架已连接，远程偏好与日志实时同步。</string>
+    <string name="debug_env_disconnected_desc">框架未连接，设置暂存本机，连接后自动同步。</string>
+    <string name="debug_search_acd">搜索日志</string>
+    <string name="debug_capture_level_acd">日志采集等级</string>
+    <string name="debug_clear_search">清除关键词</string>
     <string name="debug_copy">复制</string>
     <string name="debug_share">分享</string>
     <string name="debug_clear">清空</string>
@@ -116,6 +128,12 @@
     <string name="debug_installed">已安装</string>
     <string name="debug_not_installed">未安装</string>
     <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
+    <string name="debug_sensor_line">最近传感器：%1$s · raw %2$s → %3$s · %4$s</string>
+    <string name="debug_sensor_none">暂无传感器事件（目标应用未上报或未启用）</string>
+    <string name="debug_time_just_now">刚刚</string>
+    <string name="debug_time_seconds_ago">%1$d 秒前</string>
+    <string name="debug_time_minutes_ago">%1$d 分钟前</string>
+    <string name="debug_time_hours_ago">%1$d 小时前</string>
 
     <string name="mode_help">说明</string>
     <string name="mode_help_title">修改方式说明</string>

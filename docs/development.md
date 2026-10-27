@@ -16,7 +16,7 @@
 
 ## 架构与实现
 
-- 入口 `io.github.gythialy.sporteditor.hook.SportEditorModule` 继承
+- 入口 `io.github.sporteditor.hook.SportEditorModule` 继承
   `io.github.libxposed.api.XposedModule`，通过 `META-INF/xposed/java_init.list` 注册；
   模块信息在 `META-INF/xposed/module.prop`。
 - 在目标进程 hook `android.hardware.SystemSensorManager` 的监听注册，记录
@@ -27,16 +27,18 @@
   在进程运行/解冻时应用新配置。
 - 步数计算集中在纯 Kotlin 的 `StepTransformer`，不依赖 Android，便于 JVM 单元测试。
 - 上报给目标应用的是连续递增的绝对计数，每个本地自然日有独立额度，额度为
-  `maxSteps + 0–100` 随机浮动。每天只转换当日 raw 增量（倍率/增加）、固定值或自动回调，
-  单日增量封顶；跨天时把上一日报值作为新一天起点，目标应用在零点不会看到回跳。中途调低
-  上限会立即生效，不会因为已经超过旧上限而继续累加。
+  `maxSteps + 0–100` 随机浮动。每天只转换当日 raw 增量（倍率/增加）、固定值或自动回调；
+  **日报总值封顶**：`上一日报值 + 当日增量` 不会超过当日额度，因此跨天结转值也不会把
+  显示步数推到上限之上；跨天时把上一日报值（钳制到当日额度内）作为新一天起点，
+  目标应用在零点基本不会看到回跳（仅当之前的累计值超过上限时会一次性收敛到上限）。
+  中途调低上限会立即生效，当日总值会降到新上限。
 - `TYPE_STEP_COUNTER` 是开机以来的累计值，系统重启后从 0 重新计数；模块用
   `SystemClock.elapsedRealtime()` 判定重启，把重启前的当日增量折进基线补偿，重启后的
   raw 直接计入当天，因此重启不会丢当日进度。`TYPE_STEP_DETECTOR` 每步一个 `1.0` 事件，
   按事件累加处理。
 - 每日基线、当日额度与重启标记通过 `DailyStateStore` 持久化到目标应用的私有
   `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计；
-  v1.2 的绝对值状态会在首次使用时迁移，避免负跳变。
+  v1.2 的绝对值状态会在首次使用时迁移，并钳制到当日额度内，避免超过上限的旧值残留。
 - 所有应用默认关闭；微信的固定值模式会被 `AppTarget.sanitize()` 回退为默认倍率模式，
   因为微信运动按增量同步，固定值无法产生增量。
 - 界面语言由 `AppLanguageStore` 保存在应用私有 SharedPreferences，`MainActivity.attachBaseContext`
@@ -45,11 +47,19 @@
   版本比较由纯 Kotlin 的 `VersionComparator` 完成。
 - 主界面只保留应用配置与设置入口；语言、版本更新、诊断与关于信息集中在设置页。
 - 每个应用卡片在启用后可单独重置为默认值（二次确认），不存在全局重置。
+- 目标进程把传感器事件以结构化 key=value 写入诊断日志：
+  `step sensor=STEP_COUNTER type=19 raw=1307.0 -> reported=1750.0 mode=MULTIPLY value=50 limit=20075`，
+  并在注册监听时记录 `sensor registered type=... handle=...`。每个进程前 20 条逐条记录，
+  之后最多每 60 秒记一条 `step summary` 汇总，避免刷满 500 条日志缓冲。
+- 诊断页「目标应用」使用目标应用的真实启动器图标（未安装回退字母徽标），展开后显示
+  `最近传感器`：类型、raw → reported 与相对时间，数据来自该包最近一条结构化日志。
+- 采集等级在断连期间修改会写入 `local_settings` 的 `pending_capture_level`，
+  重连后推送一次并清除，避免被远程旧值覆盖。
 
 ## 目录结构
 
 ```text
-app/src/main/java/io/github/gythialy/sporteditor/
+app/src/main/java/io/github/sporteditor/
 ├── SportEditorApp.kt          # Application，Xposed 服务连接
 ├── data/                      # 目标应用、设置模型、Remote Preferences 仓库
 ├── debug/                     # 诊断日志存储、跨进程发送/接收
@@ -89,7 +99,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 ## 测试
 
-- JVM 单元测试：54 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
+- JVM 单元测试：58 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```
@@ -117,7 +127,7 @@ Dependabot 每周检查 Gradle 依赖与 GitHub Actions，配置见
 ## 已知限制
 
 - 每日基线保存在目标应用的私有 SharedPreferences 中；清除目标应用数据或重装会重置基线。
-- 上报的绝对值会按天累加，长期运行最终受 `9,999,999` 保护上限限制。
+- 跨天结转值被钳制在当日额度内；若此前累计值超过上限，升级后的第一天会一次性降到上限。
 - 微信运动按增量同步，跨天边界与上限抖动仍需真机连续两天验证。
 - 时区或系统日期大幅跳变时，当天基线可能被提前/推迟重置。
 - 模拟器无法验证真实计步传感器。

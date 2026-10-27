@@ -12,6 +12,7 @@
 
 # Local build sandbox (Gradle user home, Android user home, temp artifacts)
 /.build-home/
+/.gradle-ci-home/
 /.android-home/
 /.tmp/
 /.tmp-emu/

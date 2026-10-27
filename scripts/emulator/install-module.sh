@@ -25,7 +25,7 @@ adb_cmd install -r "$APK" >/dev/null
 for pkg in com.tencent.mm com.eg.android.AlipayGphone com.tencent.mobileqq com.sina.weibo; do
   adb_cmd shell am force-stop "$pkg" >/dev/null 2>&1 || true
 done
-adb_cmd shell am start -n io.github.gythialy.sporteditor/.ui.MainActivity >/dev/null 2>&1 || true
+adb_cmd shell am start -n io.github.sporteditor/.ui.MainActivity >/dev/null 2>&1 || true
 
 if [ "$VERIFY" = "1" ]; then
   log "launching fake target and filtering logs"

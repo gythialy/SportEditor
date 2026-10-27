@@ -42,13 +42,13 @@ if (buildingRelease && System.getenv("REQUIRE_RELEASE_SIGNING") == "true" && !ha
 }
 
 android {
-    namespace = "io.github.gythialy.sporteditor"
+    namespace = "io.github.sporteditor"
     compileSdk = 37
     compileSdkMinor = 1
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "io.github.gythialy.sporteditor"
+        applicationId = "io.github.sporteditor"
         minSdk = 26
         targetSdk = 37
         versionCode = 104

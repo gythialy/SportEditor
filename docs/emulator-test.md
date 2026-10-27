@@ -109,7 +109,7 @@ echo PREINITDEVICE=metadata >> config
 - Vector 正确识别模块：管理器显示 Sport Editor / API 102 / 描述来自 `android:description`。
 - 目标进程日志：
   ```
-  VectorModuleManager: Loading module io.github.gythialy.sporteditor
+  VectorModuleManager: Loading module io.github.sporteditor
   SportEditor: loaded in com.tencent.mm: framework=Vector 2.2 (versionCode=3080, libApi=102)
   SportEditor: com.tencent.mm: config at install -> TargetSettings(enabled=true, mode=MULTIPLY, value=100)
   SportEditor: hooks installed for com.tencent.mm
