@@ -144,6 +144,8 @@
     <string name="label_max_steps">Daily max</string>
     <string name="label_max_steps_base">Base max</string>
     <string name="max_steps_effective_hint">Effective today = base + a daily random 0–100</string>
+    <string name="max_steps_base_value">Base %1$s</string>
+    <string name="max_steps_today_offset">Today +%1$d</string>
 
     <!-- Language -->
     <string name="language_title">Language</string>

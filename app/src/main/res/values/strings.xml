@@ -144,6 +144,8 @@
     <string name="label_max_steps">每日上限</string>
     <string name="label_max_steps_base">基础上限</string>
     <string name="max_steps_effective_hint">今日生效值 = 基础上限 + 每日随机 0–100 步</string>
+    <string name="max_steps_base_value">基准 %1$s</string>
+    <string name="max_steps_today_offset">今日 +%1$d</string>
 
     <!-- Language -->
     <string name="language_title">语言</string>

@@ -53,7 +53,6 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -110,6 +109,7 @@ import io.github.sporteditor.debug.DebugLogLevel
 import io.github.sporteditor.debug.DebugLogStore
 import io.github.sporteditor.debug.DebugLogType
 import io.github.sporteditor.debug.SensorEventLog
+import io.github.sporteditor.ui.art.EmptyLogArt
 import io.github.sporteditor.ui.theme.cardContainerColor
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -502,16 +502,17 @@ private fun LogsPage(
         }
 
         if (filtered.isEmpty()) {
+            val searching = query.isNotBlank() || selected.isNotEmpty()
             item {
                 EmptyState(
-                    icon = Icons.Outlined.SearchOff,
                     title = stringResource(
-                        if (query.isNotBlank() || selected.isNotEmpty()) {
+                        if (searching) {
                             R.string.debug_empty_filtered
                         } else {
                             R.string.debug_empty
                         }
-                    )
+                    ),
+                    searching = searching
                 )
             }
         } else {
@@ -844,19 +845,23 @@ private fun TipsCard() {
 }
 
 @Composable
-private fun EmptyState(icon: ImageVector, title: String) {
+private fun EmptyState(title: String, searching: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 34.dp),
+            .padding(top = 28.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(36.dp))
+        EmptyLogArt(
+            searching = searching,
+            modifier = Modifier.size(width = 112.dp, height = 72.dp)
+        )
         Text(
             text = title,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 24.dp)
         )
     }
 }

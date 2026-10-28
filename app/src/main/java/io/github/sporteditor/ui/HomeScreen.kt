@@ -1,10 +1,12 @@
 package io.github.sporteditor.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -100,6 +103,8 @@ import io.github.sporteditor.data.DailyLimit
 import io.github.sporteditor.data.SettingsState
 import io.github.sporteditor.data.StepMode
 import io.github.sporteditor.data.TargetSettings
+import io.github.sporteditor.ui.art.EffectiveLimitStrip
+import io.github.sporteditor.ui.art.LinkBrokenArt
 import io.github.sporteditor.ui.theme.cardContainerColor
 import java.text.NumberFormat
 import kotlinx.coroutines.delay
@@ -267,6 +272,27 @@ private fun ConnectionPill(connected: Boolean, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Reveals one piece of card content slightly after the previous one, so the disconnected card
+ * builds up instead of popping in as a single block.
+ *
+ * The Compose animation clock follows the system "remove animations" setting, so this collapses to
+ * an instant reveal when the user turns animations off.
+ */
+@Composable
+private fun StaggeredAppear(index: Int, content: @Composable () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { shown = true }
+    val delay = index * 60
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(animationSpec = tween(durationMillis = 220, delayMillis = delay)) +
+            slideInVertically(animationSpec = tween(durationMillis = 220, delayMillis = delay)) { it / 6 }
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun DisconnectedCard(onViewSteps: () -> Unit) {
     Card(
@@ -283,37 +309,57 @@ private fun DisconnectedCard(onViewSteps: () -> Unit) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Warning,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = stringResource(R.string.status_disconnected),
-                    style = MaterialTheme.typography.titleSmall
+            StaggeredAppear(0) {
+                LinkBrokenArt(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(40.dp),
+                    color = MaterialTheme.colorScheme.onErrorContainer
                 )
             }
-            Text(
-                text = stringResource(R.string.status_disconnected_hint),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
-                text = stringResource(R.string.status_not_synced),
-                style = MaterialTheme.typography.bodySmall
-            )
-            TextButton(
-                onClick = onViewSteps,
-                modifier = Modifier.align(Alignment.End),
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                ),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Text(stringResource(R.string.action_view_steps))
+            StaggeredAppear(1) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.status_disconnected),
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                }
+            }
+            StaggeredAppear(2) {
+                Text(
+                    text = stringResource(R.string.status_disconnected_hint),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            StaggeredAppear(3) {
+                Text(
+                    text = stringResource(R.string.status_not_synced),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            StaggeredAppear(4) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    TextButton(
+                        onClick = onViewSteps,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Text(stringResource(R.string.action_view_steps))
+                    }
+                }
             }
         }
     }
@@ -819,11 +865,22 @@ private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onDraftMaxStepsC
             enter = expandVertically() + fadeIn(),
             exit = shrinkVertically() + fadeOut()
         ) {
-            MaxStepsField(
-                maxSteps = maxSteps,
-                onDraftChange = onDraftMaxStepsChange,
-                onMaxStepsChange = onMaxStepsChange
-            )
+            val offset = (effectiveLimit - maxSteps).coerceIn(0, DailyLimit.JITTER_LIMIT)
+            Column {
+                MaxStepsField(
+                    maxSteps = maxSteps,
+                    onDraftChange = onDraftMaxStepsChange,
+                    onMaxStepsChange = onMaxStepsChange
+                )
+                // Shows where today's effective value sits inside the deterministic random range,
+                // so the "上限 80,037" number above the section is no longer a surprise.
+                EffectiveLimitStrip(
+                    baseLabel = stringResource(R.string.max_steps_base_value, formatNumber(maxSteps)),
+                    offsetLabel = stringResource(R.string.max_steps_today_offset, offset),
+                    fraction = offset / DailyLimit.JITTER_LIMIT.toFloat(),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
         }
     }
 }
