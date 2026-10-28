@@ -1,5 +1,12 @@
 package io.github.sporteditor.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,7 +27,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
@@ -55,6 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.sporteditor.BuildConfig
 import io.github.sporteditor.R
+import io.github.sporteditor.ui.art.UpdateSpinner
 import io.github.sporteditor.ui.theme.cardContainerColor
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,6 +277,38 @@ private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onCl
     )
 }
 
+/** Mutually exclusive update states; drives the [AnimatedContent] key below the check button. */
+private enum class UpdateStatus { Idle, Checking, UpToDate, Available, Error }
+
+private fun UpdateUiState.status(): UpdateStatus = when {
+    checking -> UpdateStatus.Checking
+    update != null -> UpdateStatus.Available
+    upToDate -> UpdateStatus.UpToDate
+    error != null -> UpdateStatus.Error
+    else -> UpdateStatus.Idle
+}
+
+@Composable
+private fun UpdateStatusLine(icon: ImageVector, tint: Color, text: String) {
+    Row(
+        modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            color = tint
+        )
+    }
+}
+
 @Composable
 private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onOpenRelease: (String) -> Unit) {
     Column {
@@ -299,11 +341,15 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
                 .padding(start = 48.dp)
                 .padding(bottom = 4.dp)
         ) {
-            Icon(
-                imageVector = Icons.Filled.Refresh,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
+            if (updateState.checking) {
+                UpdateSpinner(modifier = Modifier.size(18.dp))
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
             Spacer(Modifier.width(4.dp))
             Text(
                 stringResource(
@@ -312,44 +358,58 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
             )
         }
 
-        val update = updateState.update
-        when {
-            update != null -> {
-                Column(
-                    modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.update_available, update.version),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    TextButton(
-                        onClick = { onOpenRelease(update.htmlUrl) },
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(stringResource(R.string.update_open))
+        // The result used to be a bare Text sibling of the row: every state change inserted or
+        // removed a line and pushed the card below up and down. Cross-fading between the states
+        // keeps the transition readable and the surrounding layout still.
+        AnimatedContent(
+            targetState = updateState.status(),
+            transitionSpec = {
+                (fadeIn(animationSpec = tween(durationMillis = 180)) + expandVertically(expandFrom = Alignment.Top)) togetherWith
+                    (fadeOut(animationSpec = tween(durationMillis = 120)) + shrinkVertically(shrinkTowards = Alignment.Top))
+            },
+            label = "update-status"
+        ) { status ->
+            when (status) {
+                UpdateStatus.Idle, UpdateStatus.Checking -> Spacer(Modifier)
+
+                UpdateStatus.Available -> {
+                    val update = updateState.update
+                    if (update != null) {
+                        Column(
+                            modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.update_available, update.version),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            TextButton(
+                                onClick = { onOpenRelease(update.htmlUrl) },
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(stringResource(R.string.update_open))
+                            }
+                        }
                     }
                 }
+
+                UpdateStatus.UpToDate -> UpdateStatusLine(
+                    icon = Icons.Filled.CheckCircle,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = stringResource(R.string.update_up_to_date)
+                )
+
+                UpdateStatus.Error -> UpdateStatusLine(
+                    icon = Icons.Filled.Error,
+                    tint = MaterialTheme.colorScheme.error,
+                    text = stringResource(R.string.update_error, updateState.error.orEmpty())
+                )
             }
-
-            updateState.upToDate -> Text(
-                text = stringResource(R.string.update_up_to_date),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp)
-            )
-
-            updateState.error != null -> Text(
-                text = stringResource(R.string.update_error, updateState.error),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp)
-            )
         }
     }
 }
