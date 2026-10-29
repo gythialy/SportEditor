@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import io.github.sporteditor.ui.theme.animationsEnabled
 
 /**
  * "Two nodes that never link up" illustration for the disconnected state.
@@ -29,21 +30,31 @@ import androidx.compose.ui.unit.dp
  * @param color stroke color, defaults to the error container content color
  */
 @Composable
-fun LinkBrokenArt(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onErrorContainer) {
-    val transition = rememberInfiniteTransition(label = "link-broken")
-    // One dash period per loop, so the repeat seams are invisible.
-    val dashPhase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 7f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 1400, easing = LinearEasing)),
-        label = "link-broken-dash"
-    )
-    val travel by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 3200, easing = LinearEasing)),
-        label = "link-broken-travel"
-    )
+fun LinkBrokenArt(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.error) {
+    // With animations off the picture still has to read: dashes at rest and the signal dot parked
+    // past the fade-out point, instead of a loop frozen at whatever phase the system stopped on.
+    val animations = animationsEnabled()
+    val phase = if (animations) {
+        val transition = rememberInfiniteTransition(label = "link-broken")
+        // One dash period per loop, so the repeat seams are invisible.
+        val dash by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 7f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 1400, easing = LinearEasing)),
+            label = "link-broken-dash"
+        )
+        val travel by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 3200, easing = LinearEasing)),
+            label = "link-broken-travel"
+        )
+        dash to travel
+    } else {
+        0f to 0.9f
+    }
+    val dashPhase = phase.first
+    val travel = phase.second
 
     Canvas(modifier = modifier) {
         val centerY = size.height / 2f

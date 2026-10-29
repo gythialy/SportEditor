@@ -65,7 +65,10 @@ import androidx.compose.ui.unit.dp
 import io.github.sporteditor.BuildConfig
 import io.github.sporteditor.R
 import io.github.sporteditor.ui.art.UpdateSpinner
+import io.github.sporteditor.ui.theme.Dimensions
 import io.github.sporteditor.ui.theme.cardContainerColor
+import io.github.sporteditor.ui.theme.contentInset
+import io.github.sporteditor.ui.theme.windowWidthDp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,6 +87,8 @@ fun SettingsScreen(
 ) {
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+
+    val sideInset = contentInset(windowWidthDp())
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -104,9 +109,17 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(innerPadding)
+                .padding(horizontal = sideInset),
+            // Same inset and group rhythm as the home screen; the two lists used to breathe
+            // differently for no reason a reader could see.
+            contentPadding = PaddingValues(
+                start = Dimensions.Page,
+                end = Dimensions.Page,
+                top = 4.dp,
+                bottom = 32.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(Dimensions.Gap)
         ) {
             item { SectionLabel(R.string.section_general) }
             item {
@@ -167,7 +180,7 @@ fun SettingsScreen(
                             Icon(
                                 imageVector = Icons.Filled.Info,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         headlineContent = { Text(stringResource(R.string.settings_version)) },
@@ -220,7 +233,9 @@ private fun SectionLabel(labelRes: Int, modifier: Modifier = Modifier) {
         text = stringResource(labelRes),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(start = 4.dp, bottom = 2.dp)
+        // Flush with the card below it. The 4 dp nudge put the label on no axis at all: not the
+        // card edge, not the row icon, not the row title.
+        modifier = modifier.padding(bottom = 2.dp)
     )
 }
 
@@ -254,7 +269,7 @@ private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onCl
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         },
         headlineContent = { Text(title) },
@@ -317,7 +332,7 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
                 Icon(
                     imageVector = Icons.Filled.SystemUpdate,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             },
             headlineContent = { Text(stringResource(R.string.update_title)) },
@@ -337,6 +352,9 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
             onClick = onCheckUpdate,
             enabled = !updateState.checking,
             contentPadding = PaddingValues(horizontal = 8.dp),
+            // 48 dp, not 56: the button's own 8 dp content padding puts the icon on the same
+            // left edge as the row title above (56 dp), which is where the status lines that
+            // replace this action also start.
             modifier = Modifier
                 .padding(start = 48.dp)
                 .padding(bottom = 4.dp)

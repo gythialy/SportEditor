@@ -58,6 +58,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -110,7 +111,12 @@ import io.github.sporteditor.debug.DebugLogStore
 import io.github.sporteditor.debug.DebugLogType
 import io.github.sporteditor.debug.SensorEventLog
 import io.github.sporteditor.ui.art.EmptyLogArt
+import io.github.sporteditor.ui.theme.Dimensions
+import io.github.sporteditor.ui.theme.Motion
+import io.github.sporteditor.ui.theme.animationsEnabled
 import io.github.sporteditor.ui.theme.cardContainerColor
+import io.github.sporteditor.ui.theme.contentInset
+import io.github.sporteditor.ui.theme.windowWidthDp
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -147,6 +153,7 @@ fun DiagnosticsScreen(
     var menuOpen by remember { mutableStateOf(false) }
 
     val filtered = DebugLogFilter.apply(entries, selectedTypes, query)
+    val sideInset = contentInset(windowWidthDp())
     val copiedMessage = stringResource(R.string.debug_copied)
     val clearedMessage = stringResource(R.string.debug_cleared)
 
@@ -197,12 +204,18 @@ fun DiagnosticsScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        // 内容 pager 占满剩余高度，tabs 固定在底部（对应设计稿 01/01b/01c/02/03）。
+        // The three views are one page-level switch, not navigation: the tab row sits directly
+        // under the app bar where a page switch belongs, instead of eating the bottom 72 dp that
+        // the log list needs.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                // Readable measure on tablets; the tab row is centred with the content.
+                .padding(horizontal = sideInset)
         ) {
+            DiagnosticsTabBar(pagerState)
+
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier
@@ -224,8 +237,6 @@ fun DiagnosticsScreen(
                     DiagnosticsTab.APPS -> AppsPage(state = state, entries = entries)
                 }
             }
-
-            DiagnosticsTabBar(pagerState)
         }
     }
 }
@@ -458,6 +469,15 @@ private fun LogsPage(
     timeFormat: SimpleDateFormat,
     onSelectedChange: (Set<DebugLogType>) -> Unit
 ) {
+    // Stable list keys for the insertion/placement animation. Entries are data classes without an
+    // id and two identical lines can share the same millisecond, so identity — not equality, not
+    // time — is the only safe key. Rebuilt whenever the ring changes: O(n) on a ≤500 entry buffer.
+    val itemKeys = remember(allEntries) {
+        java.util.IdentityHashMap<DebugLogEntry, String>().apply {
+            allEntries.forEachIndexed { index, entry -> put(entry, "log-$index") }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
@@ -516,8 +536,19 @@ private fun LogsPage(
                 )
             }
         } else {
-            itemsIndexed(filtered.asReversed()) { _, entry ->
-                LogCard(entry = entry, timeFormat = timeFormat)
+            itemsIndexed(
+                items = filtered.asReversed(),
+                key = { index, entry -> itemKeys[entry] ?: "log-fallback-$index" }
+            ) { _, entry ->
+                LogCard(
+                    entry = entry,
+                    timeFormat = timeFormat,
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = Motion.enter(),
+                        placementSpec = Motion.enter(),
+                        fadeOutSpec = Motion.leave()
+                    )
+                )
             }
         }
     }
@@ -546,21 +577,21 @@ private fun TypeChip(label: String, count: Int, selected: Boolean, modifier: Mod
 }
 
 @Composable
-private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat) {
+private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier: Modifier = Modifier) {
     var expanded by rememberSaveable(entry.time, entry.source, entry.message) { mutableStateOf(false) }
 
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = cardContainerColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded }
             .animateContentSize()
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp)
+            modifier = Modifier.padding(horizontal = Dimensions.Card, vertical = Dimensions.Gap),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -670,7 +701,7 @@ private fun EnvironmentPage(state: SettingsState, entriesSize: Int) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        PulseDot()
+                        PulseDot(connected = state.connected)
                         Text(
                             text = stringResource(
                                 if (state.connected) R.string.debug_connected else R.string.debug_disconnected
@@ -686,24 +717,26 @@ private fun EnvironmentPage(state: SettingsState, entriesSize: Int) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    // Was a grey box inside a card: a container standing in for proximity. The same
+                    // grouping is now carried by a label above its value, like every other fact here.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = stringResource(R.string.debug_framework),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
                         )
                         Text(
                             text = (state.frameworkName ?: "—") + " " + (state.frameworkVersion ?: "") +
                                 " · API " + (state.apiVersion ?: 0),
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -748,20 +781,30 @@ private fun EnvironmentPage(state: SettingsState, entriesSize: Int) {
 }
 
 @Composable
-private fun PulseDot() {
-    val transition = rememberInfiniteTransition(label = "connect-pulse")
-    val alpha by transition.animateFloat(
-        initialValue = 1f,
-        targetValue = .45f,
-        animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
-        label = "connect-pulse-alpha"
-    )
+private fun PulseDot(connected: Boolean) {
+    // The dot is part of the status sentence, so it has to mean the same thing as the words beside
+    // it: it takes the status colour instead of always being primary. Only a live connection
+    // pulses — a still dot is the honest read for "not connected", and it also stops an infinite
+    // animation in the state users are most likely to sit in.
+    val animations = animationsEnabled()
+    val color = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    val alpha = if (connected && animations) {
+        val transition = rememberInfiniteTransition(label = "connect-pulse")
+        transition.animateFloat(
+            initialValue = 1f,
+            targetValue = .45f,
+            animationSpec = infiniteRepeatable(tween(1200), RepeatMode.Reverse),
+            label = "connect-pulse-alpha"
+        ).value
+    } else {
+        1f
+    }
     Box(
         modifier = Modifier
             .size(11.dp)
             .alpha(alpha)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.primary)
+            .background(color)
     )
 }
 
@@ -1008,18 +1051,32 @@ private fun AppRow(snapshot: TargetSnapshot, detail: Boolean, lastSensor: DebugL
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (settings.enabled) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.outlineVariant
-                            }
-                        )
-                )
+                // A dot with no word was unreadable at 8 dp and meant nothing on its own; the home
+                // screen labels the same state, so this row does too.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (settings.enabled) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.outline
+                                }
+                            )
+                    )
+                    Text(
+                        text = stringResource(
+                            if (settings.enabled) R.string.debug_filter_enabled else R.string.debug_disabled
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             if (detail) {
