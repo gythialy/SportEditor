@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
+import io.github.sporteditor.ui.theme.animationsEnabled
 
 /**
  * Indeterminate spinner used while the update check is running.
@@ -26,13 +27,20 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun UpdateSpinner(modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
-    val transition = rememberInfiniteTransition(label = "update-spinner")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 900, easing = LinearEasing)),
-        label = "update-spinner-angle"
-    )
+    // With animations off the arc stays still: the surrounding label already says "checking", and a
+    // loop frozen mid-rotation would read as a broken control rather than a resting one.
+    val animations = animationsEnabled()
+    val angle = if (animations) {
+        val transition = rememberInfiniteTransition(label = "update-spinner")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 900, easing = LinearEasing)),
+            label = "update-spinner-angle"
+        ).value
+    } else {
+        0f
+    }
 
     Canvas(modifier = modifier) {
         val stroke = 2.dp.toPx()

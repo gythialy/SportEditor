@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import io.github.sporteditor.ui.ThemeMode
@@ -72,6 +73,22 @@ fun ThemeMode.resolveDarkTheme(): Boolean = when (this) {
     ThemeMode.LIGHT -> false
     ThemeMode.DARK -> true
 }
+
+/**
+ * The one earned alert wash: the alert hue laid over a card at low opacity instead of used as a
+ * fill. A filled `errorContainer` reads as pale paper in light and as a saturated slab in dark,
+ * and under dynamic colour it becomes whatever the wallpaper's error role happens to be — the
+ * disconnected notice was the loudest surface in the app in dark mode. A wash keeps the notice
+ * recognisable in both themes while the alert hue itself stays on the icon, the title and the
+ * status dot.
+ */
+@Composable
+fun alertWash(): Color {
+    val scheme = MaterialTheme.colorScheme
+    return scheme.error.copy(alpha = ALERT_WASH_ALPHA).compositeOver(scheme.surfaceContainerLowest)
+}
+
+private const val ALERT_WASH_ALPHA = 0.12f
 
 /**
  * Card surface that keeps the page/card hierarchy in both themes: white cards on the tinted

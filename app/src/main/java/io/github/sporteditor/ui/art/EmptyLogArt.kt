@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import io.github.sporteditor.ui.theme.animationsEnabled
 
 /**
  * Illustration for an empty log list: a sheet of paper with a folded corner that drifts gently.
@@ -28,16 +29,23 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun EmptyLogArt(searching: Boolean, modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "empty-log")
-    val drift by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            tween(durationMillis = 2600, easing = FastOutSlowInEasing),
-            RepeatMode.Reverse
-        ),
-        label = "empty-log-drift"
-    )
+    // An infinite drift can only be frozen, not collapsed, so with animations off the sheet simply
+    // rests at its neutral position instead of freezing at an arbitrary offset and opacity.
+    val animations = animationsEnabled()
+    val drift = if (animations) {
+        val transition = rememberInfiniteTransition(label = "empty-log")
+        transition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                tween(durationMillis = 2600, easing = FastOutSlowInEasing),
+                RepeatMode.Reverse
+            ),
+            label = "empty-log-drift"
+        ).value
+    } else {
+        0.5f
+    }
 
     val outline = MaterialTheme.colorScheme.outline
     val accent = MaterialTheme.colorScheme.primary

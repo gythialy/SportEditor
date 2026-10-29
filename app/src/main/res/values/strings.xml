@@ -11,6 +11,9 @@
     <string name="status_disconnected">LSPosed 服务未连接</string>
     <string name="status_connected_detail">框架：%1$s %2$s · API %3$d</string>
     <string name="status_disconnected_hint">请在 LSPosed 管理器中启用本模块，勾选目标应用作为作用域，然后重启本应用。</string>
+    <string name="status_disconnected_hint_short">在 LSPosed 中启用本模块并重启本应用</string>
+    <string name="state_expanded">已展开</string>
+    <string name="state_collapsed">已收起</string>
     <string name="status_not_synced">当前设置只保存在本机，连接 LSPosed 服务后才会同步到被修改的应用。</string>
     <string name="status_sheet_title">连接状态</string>
     <string name="action_view_steps">查看步骤</string>
@@ -23,7 +26,6 @@
     <string name="action_reset_target_done">已重置 %1$s</string>
     <string name="action_cancel">取消</string>
 
-    <string name="app_summary_disabled">已关闭</string>
     <string name="app_summary_multiply">×%1$s</string>
     <string name="app_summary_add">+%1$s</string>
     <string name="app_summary_auto">自动 +%1$s</string>
@@ -60,7 +62,7 @@
     <string name="preview_target">按实际 %1$s 步计算 → %2$s 步</string>
     <string name="preview_auto">每次回调 +%1$s 步，累计 %2$s 后重置</string>
     <string name="preview_replace">固定返回 %1$s 步</string>
-    <string name="preview_capped">超出每日上限时封顶</string>
+    <string name="preview_capped">封顶</string>
 
     <string name="preset_multiply">×%1$s</string>
     <string name="preset_value">%1$s</string>
@@ -99,6 +101,7 @@
     <string name="debug_level_warn">警告</string>
     <string name="debug_level_error">错误</string>
     <string name="debug_filter_enabled">已启用</string>
+    <string name="debug_disabled">已关闭</string>
     <string name="debug_filter_uninstalled">未安装</string>
     <string name="debug_apps_summary">已启用 %1$d/%2$d · 已安装 %3$d</string>
     <string name="debug_search_matches">命中 %1$d 条，共 %2$d 条</string>
@@ -122,7 +125,6 @@
     <string name="debug_android">Android</string>
     <string name="debug_device">设备</string>
     <string name="debug_framework">框架</string>
-    <string name="debug_service">服务</string>
     <string name="debug_connected">已连接</string>
     <string name="debug_disconnected">未连接</string>
     <string name="debug_installed">已安装</string>
@@ -160,5 +162,5 @@
     <string name="update_up_to_date">已是最新版本</string>
     <string name="update_available">发现新版本 %1$s</string>
     <string name="update_open">打开发布页</string>
-    <string name="update_error">检查失败：%1$s</string>
+    <string name="update_error">检查失败（%1$s）· 稍后重试</string>
 </resources>

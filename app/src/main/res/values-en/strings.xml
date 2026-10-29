@@ -11,6 +11,9 @@
     <string name="status_disconnected">LSPosed service not connected</string>
     <string name="status_connected_detail">Framework: %1$s %2$s · API %3$d</string>
     <string name="status_disconnected_hint">Enable this module in LSPosed, select the target apps as scope, then restart this app.</string>
+    <string name="status_disconnected_hint_short">Enable it in LSPosed, then restart this app</string>
+    <string name="state_expanded">Expanded</string>
+    <string name="state_collapsed">Collapsed</string>
     <string name="status_not_synced">Settings are stored on this device only. Connect the LSPosed service to sync them to the hooked apps.</string>
     <string name="status_sheet_title">Connection</string>
     <string name="action_view_steps">View steps</string>
@@ -23,7 +26,6 @@
     <string name="action_reset_target_done">%1$s reset</string>
     <string name="action_cancel">Cancel</string>
 
-    <string name="app_summary_disabled">Off</string>
     <string name="app_summary_multiply">%1$s×</string>
     <string name="app_summary_add">+%1$s</string>
     <string name="app_summary_auto">Auto +%1$s</string>
@@ -52,15 +54,15 @@
     <string name="mode_auto">Auto</string>
     <string name="mode_replace">Fixed</string>
 
-    <string name="mode_short_multiply">Multiplier</string>
-    <string name="mode_short_add">Add</string>
+    <string name="mode_short_multiply">×</string>
+    <string name="mode_short_add">+</string>
     <string name="mode_short_auto">Auto</string>
     <string name="mode_short_replace">Fixed</string>
 
     <string name="preview_target">At %1$s real steps → %2$s steps</string>
     <string name="preview_auto">Adds %1$s per callback, resets after %2$s</string>
     <string name="preview_replace">Always reports %1$s steps</string>
-    <string name="preview_capped">capped by the daily max</string>
+    <string name="preview_capped">capped</string>
 
     <string name="preset_multiply">×%1$s</string>
     <string name="preset_value">%1$s</string>
@@ -99,6 +101,7 @@
     <string name="debug_level_warn">Warning</string>
     <string name="debug_level_error">Error</string>
     <string name="debug_filter_enabled">Enabled</string>
+    <string name="debug_disabled">Off</string>
     <string name="debug_filter_uninstalled">Not installed</string>
     <string name="debug_apps_summary">Enabled %1$d/%2$d · Installed %3$d</string>
     <string name="debug_search_matches">%1$d matched of %2$d</string>
@@ -122,7 +125,6 @@
     <string name="debug_android">Android</string>
     <string name="debug_device">Device</string>
     <string name="debug_framework">Framework</string>
-    <string name="debug_service">Service</string>
     <string name="debug_connected">Connected</string>
     <string name="debug_disconnected">Disconnected</string>
     <string name="debug_installed">Installed</string>
@@ -160,5 +162,5 @@
     <string name="update_up_to_date">You are up to date</string>
     <string name="update_available">Version %1$s is available</string>
     <string name="update_open">Open release page</string>
-    <string name="update_error">Check failed: %1$s</string>
+    <string name="update_error">Check failed (%1$s) · Try again later</string>
 </resources>

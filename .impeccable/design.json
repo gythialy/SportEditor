@@ -1,0 +1,484 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T14:45:00+08:00",
+  "title": "Design System: Sport Editor",
+  "extensions": {
+    "colorMeta": {
+      "huizhou-pine": {
+        "role": "primary",
+        "displayName": "Huizhou Pine",
+        "canonical": "#006C4C",
+        "tonalRamp": [
+          "#000F08",
+          "#002C1D",
+          "#004C35",
+          "#086F4F",
+          "#429271",
+          "#6DB696",
+          "#97DCBC",
+          "#C0FFE2"
+        ]
+      },
+      "huizhou-pine-light": {
+        "role": "primary",
+        "displayName": "Huizhou Pine (dark theme)",
+        "canonical": "#7EDCB2",
+        "tonalRamp": [
+          "#000F07",
+          "#002C1C",
+          "#004C34",
+          "#1C6E4F",
+          "#3F9270",
+          "#61B993",
+          "#84E1B7",
+          "#C1FFE1"
+        ]
+      },
+      "pine-wash": {
+        "role": "primary",
+        "displayName": "Pine Wash",
+        "canonical": "#CFF2E1",
+        "tonalRamp": [
+          "#010F08",
+          "#152920",
+          "#30453B",
+          "#4C6459",
+          "#6C877B",
+          "#8FAD9E",
+          "#B3D4C4",
+          "#D5F8E7"
+        ]
+      },
+      "pine-ink": {
+        "role": "primary",
+        "displayName": "Pine Ink",
+        "canonical": "#00382A",
+        "tonalRamp": [
+          "#00120C",
+          "#00291F",
+          "#004434",
+          "#00614B",
+          "#2B8166",
+          "#54A184",
+          "#7FC2A5",
+          "#ADE4C8"
+        ]
+      },
+      "slate-teal": {
+        "role": "secondary",
+        "displayName": "Slate Teal",
+        "canonical": "#4D6357",
+        "tonalRamp": [
+          "#020F07",
+          "#17291F",
+          "#31453A",
+          "#4E6458",
+          "#71867A",
+          "#95AB9F",
+          "#BCD0C5",
+          "#E0F4E9"
+        ]
+      },
+      "page-mist": {
+        "role": "neutral",
+        "displayName": "Page Mist",
+        "canonical": "#F1F6F2",
+        "tonalRamp": [
+          "#0A0C0A",
+          "#222523",
+          "#3E413E",
+          "#5B5F5C",
+          "#7E817E",
+          "#A2A6A2",
+          "#C7CCC8",
+          "#EBF0EC"
+        ]
+      },
+      "page-void": {
+        "role": "neutral",
+        "displayName": "Page Void",
+        "canonical": "#0F1512",
+        "tonalRamp": [
+          "#070D0A",
+          "#1F2623",
+          "#3B413E",
+          "#595F5C",
+          "#7C827F",
+          "#A0A6A3",
+          "#C6CCC9",
+          "#EAF0ED"
+        ]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#242424",
+          "#404040",
+          "#5D5D5D",
+          "#808080",
+          "#A4A4A4",
+          "#CACACA",
+          "#EEEEEE"
+        ]
+      },
+      "card-charcoal": {
+        "role": "neutral",
+        "displayName": "Card Charcoal",
+        "canonical": "#1A221E",
+        "tonalRamp": [
+          "#060D0A",
+          "#1E2622",
+          "#3A423E",
+          "#58605C",
+          "#7A827E",
+          "#9FA7A3",
+          "#C5CDC9",
+          "#E9F1ED"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1A1C1B",
+        "tonalRamp": [
+          "#0A0C0B",
+          "#222524",
+          "#3E403F",
+          "#5C5E5D",
+          "#7F8180",
+          "#A3A5A4",
+          "#C9CBCA",
+          "#EDEFEE"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "#5B6B60",
+        "tonalRamp": [
+          "#08110C",
+          "#222C26",
+          "#3C473F",
+          "#56625A",
+          "#728077",
+          "#90A096",
+          "#B2C1B8",
+          "#D8E4DC"
+        ]
+      },
+      "row-rule": {
+        "role": "neutral",
+        "displayName": "Row Rule",
+        "canonical": "#DDE7E0",
+        "tonalRamp": [
+          "#080C09",
+          "#202622",
+          "#3B413D",
+          "#59605B",
+          "#7B827D",
+          "#9FA7A1",
+          "#C4CDC7",
+          "#E7F1EA"
+        ]
+      },
+      "alert": {
+        "role": "tertiary",
+        "displayName": "Alert Red",
+        "canonical": "#BA1A1A",
+        "tonalRamp": [
+          "#1F0000",
+          "#4B0002",
+          "#7D0006",
+          "#B00C12",
+          "#D8463C",
+          "#FF7265",
+          "#FFB5AB",
+          "#FFE9E5"
+        ]
+      },
+      "alert-wash": {
+        "role": "tertiary",
+        "displayName": "Alert Wash",
+        "canonical": "#FFDAD6",
+        "tonalRamp": [
+          "#150706",
+          "#311E1D",
+          "#4F3937",
+          "#705754",
+          "#957875",
+          "#BC9C99",
+          "#E4C1BD",
+          "#FFE9E6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "数值输入框里的数字、连接弹窗标题。全 App 最大字号。"
+      },
+      "title-lg": {
+        "displayName": "Title Large",
+        "purpose": "首页顶栏标题。"
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "卡片里的 App 名称、设置行标题。"
+      },
+      "title-sm": {
+        "displayName": "Title Small",
+        "purpose": "分段按钮标签、提示卡标题行。"
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "正文、列表副标题、键值行的值。"
+      },
+      "body-sm": {
+        "displayName": "Body Small",
+        "purpose": "卡片摘要、说明文字、页脚、换算预览。"
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "分组标题、状态胶囊、chip、字段标签。"
+      },
+      "label-sm": {
+        "displayName": "Label Small",
+        "purpose": "紧密徽标（未安装）、日志类型标。"
+      },
+      "reading-mono": {
+        "displayName": "Reading Mono",
+        "purpose": "仅诊断页：时间戳、日志正文、环境值。"
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "press",
+        "value": "tween 100ms cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "触摸确认：步进钮下压 0.92、箭头旋转。位于 effects 通道，不阻塞下一次输入。"
+      },
+      {
+        "name": "settle",
+        "value": "spring dampingRatio 1.0, stiffness Medium",
+        "purpose": "读数找到落点：步数、卡片摘要、换算预览共用一个动画值，因此同步计数。用弹簧是因为步进钮可 80ms 重复触发，弹簧能把打断吸收为落定。"
+      },
+      {
+        "name": "enter",
+        "value": "tween 300ms cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "内容出现或重排：卡片展开、日志行插入、前进导航。"
+      },
+      {
+        "name": "leave",
+        "value": "tween 150ms cubic-bezier(0.3, 0, 0.8, 0.15)",
+        "purpose": "内容离开，刻意快于入场，不拖住下一个状态。"
+      },
+      {
+        "name": "switch-lead",
+        "value": "delay 80ms",
+        "purpose": "开关翻转后延迟展开，让开关拇指先走、布局随后；关闭时立即收起。"
+      },
+      {
+        "name": "stagger-step",
+        "value": "delay 60ms per row",
+        "purpose": "未连接提示卡逐行出现；关闭动画时取消错峰，整块淡入。"
+      },
+      {
+        "name": "link-broken-loop",
+        "value": "dash 1400ms linear / dot 3200ms linear, infinite",
+        "purpose": "断链插画；关闭动画时静止在虚线相位 0 且信号点已淡出。"
+      },
+      {
+        "name": "empty-log-drift",
+        "value": "2600ms FastOutSlowIn, reverse, infinite",
+        "purpose": "空日志纸页漂移；关闭动画时停在位移 0、alpha 1。"
+      },
+      {
+        "name": "update-spinner",
+        "value": "900ms linear, infinite",
+        "purpose": "更新检查转圈；关闭动画时停在 0°，由旁边的文字承担状态。"
+      },
+      {
+        "name": "connect-pulse",
+        "value": "1200ms alpha 1→0.45, reverse, infinite",
+        "purpose": "环境页连接脉冲；关闭动画时保持 alpha 1（冻结在半透明会读成故障）。"
+      },
+      {
+        "name": "theme-dip",
+        "value": "fade out 110ms / scheme swap at the seam / fade in 190ms",
+        "purpose": "切换浅色/深色时不复制视图树：内容淡出到背景色、接缝处换配色、再淡入，屏幕与滚动位置都不丢。"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-compact",
+        "value": "320px",
+        "purpose": "已测试最窄宽度：分段控件接近临界，AppBar 标题与状态胶囊只剩约 18dp。"
+      },
+      {
+        "name": "phone",
+        "value": "411px",
+        "purpose": "主力参考宽度（Pixel 7 Pro）；英文「Multiplier」在此已出现裁切。"
+      },
+      {
+        "name": "tablet",
+        "value": "600px",
+        "purpose": "平板竖屏；当前仍是单栏。"
+      },
+      {
+        "name": "tablet-wide",
+        "value": "1280px",
+        "purpose": "平板横屏；无宽度上限时卡片会被拉伸到 1248dp，属已知问题。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "App Card",
+      "kind": "card",
+      "refersTo": "card-surface",
+      "description": "每个目标 App 一张卡：图标徽标 + 名称/当前规则 + 开关，整卡可点展开编辑。",
+      "html": "<article class=\"ds-card\"><span class=\"ds-card__badge\">微</span><div class=\"ds-card__text\"><div class=\"ds-card__title\">微信</div><div class=\"ds-card__summary\">×100 · 上限 80,000</div></div><button class=\"ds-switch\" role=\"switch\" aria-checked=\"false\" aria-label=\"启用或关闭 微信\"><span class=\"ds-switch__thumb\"></span></button></article>",
+      "css": ".ds-card{display:flex;align-items:center;gap:12px;background:#FFFFFF;color:#1A1C1B;border:1px solid #DDE7E0;border-radius:16px;padding:16px;box-sizing:border-box;transition:background .15s ease,border-color .15s ease}.ds-card:hover{background:#FAFCFA}.ds-card:focus-within{border-color:#006C4C}.ds-card__badge{flex:0 0 48px;height:48px;border-radius:14px;background:#CFF2E1;color:#00382A;display:grid;place-items:center;font:500 20px/1 Roboto,'Noto Sans SC',sans-serif}.ds-card__text{flex:1 1 auto;min-width:0}.ds-card__title{font:500 16px/1.5 Roboto,'Noto Sans SC',sans-serif}.ds-card__summary{font:400 12px/1.33 Roboto,'Noto Sans SC',sans-serif;color:#5B6B60;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-switch{flex:0 0 auto;width:52px;height:32px;border-radius:999px;border:2px solid #B6C2BA;background:#E3EBE5;padding:0;position:relative;cursor:pointer;transition:background .2s ease,border-color .2s ease}.ds-switch__thumb{position:absolute;top:50%;left:6px;width:16px;height:16px;border-radius:50%;background:#5B6B60;transform:translateY(-50%);transition:left .2s ease,width .2s ease,height .2s ease,background .2s ease}.ds-switch[aria-checked=\"true\"]{background:#CFF2E1;border-color:#006C4C}.ds-switch[aria-checked=\"true\"] .ds-switch__thumb{left:26px;width:22px;height:22px;background:#006C4C}.ds-switch:focus-visible{outline:2px solid #006C4C;outline-offset:2px}"
+    },
+    {
+      "name": "Status Pill (connected)",
+      "kind": "chip",
+      "refersTo": "status-pill-connected",
+      "description": "顶栏唯一常驻状态表达；已连接态。",
+      "html": "<span class=\"ds-pill ds-pill--on\"><i class=\"ds-pill__dot\"></i>已连接</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font:500 12px/1.33 Roboto,'Noto Sans SC',sans-serif;cursor:pointer;border:none;transition:filter .15s ease}.ds-pill:hover{filter:brightness(.97)}.ds-pill:focus-visible{outline:2px solid #006C4C;outline-offset:2px}.ds-pill--on{background:#CFF2E1;color:#00382A}.ds-pill__dot{width:8px;height:8px;border-radius:50%;background:#006C4C}"
+    },
+    {
+      "name": "Status Pill (disconnected)",
+      "kind": "chip",
+      "refersTo": "status-pill-disconnected",
+      "description": "未连接态：换成告警底与告警红圆点。",
+      "html": "<span class=\"ds-pill ds-pill--off\"><i class=\"ds-pill__dot\"></i>未连接</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font:500 12px/1.33 Roboto,'Noto Sans SC',sans-serif;cursor:pointer;border:none;transition:filter .15s ease}.ds-pill:hover{filter:brightness(.97)}.ds-pill:focus-visible{outline:2px solid #006C4C;outline-offset:2px}.ds-pill--off{background:#FFDAD6;color:#410002}.ds-pill__dot{width:8px;height:8px;border-radius:50%;background:#BA1A1A}"
+    },
+    {
+      "name": "Step Button",
+      "kind": "button",
+      "refersTo": "step-button",
+      "description": "数值两侧的 48dp 圆形步进钮，长按连续步进。",
+      "html": "<button class=\"ds-step\" aria-label=\"增加\">+</button>",
+      "css": ".ds-step{width:48px;height:48px;border-radius:999px;border:none;background:#CFF2E1;color:#00382A;font:400 22px/1 Roboto,'Noto Sans SC',sans-serif;cursor:pointer;display:grid;place-items:center;transition:background .15s ease,transform .1s ease}.ds-step:hover{background:#B3D4C4}.ds-step:active{transform:scale(.96)}.ds-step:focus-visible{outline:2px solid #006C4C;outline-offset:2px}.ds-step[disabled]{background:#EAF1EC;color:#5B6B60;cursor:not-allowed}"
+    },
+    {
+      "name": "Value Field",
+      "kind": "input",
+      "refersTo": "value-field",
+      "description": "居中大号数字 + 右侧单位后缀的描边输入框；失焦提交。",
+      "html": "<label class=\"ds-field\"><input class=\"ds-field__input\" value=\"50\" inputmode=\"numeric\" aria-label=\"步数\"><span class=\"ds-field__suffix\">倍</span></label>",
+      "css": ".ds-field{display:flex;align-items:center;justify-content:space-between;gap:8px;height:72px;padding:0 16px;border:1px solid #B6C2BA;border-radius:4px;background:transparent;box-sizing:border-box;transition:border-color .15s ease}.ds-field:hover{border-color:#5B6B60}.ds-field:focus-within{border-color:#006C4C;box-shadow:inset 0 0 0 1px #006C4C}.ds-field__input{flex:1 1 auto;min-width:0;border:none;background:transparent;text-align:center;color:#1A1C1B;font:400 24px/1.33 Roboto,'Noto Sans SC',sans-serif;outline:none}.ds-field__suffix{color:#5B6B60;font:400 14px/1.43 Roboto,'Noto Sans SC',sans-serif}"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented-selected",
+      "description": "四段修改方式（倍率/增加/自动/固定）；选中态用填充色表达，不叠 check 图标。",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"修改方式\"><button class=\"ds-seg__item is-selected\">倍率</button><button class=\"ds-seg__item\">增加</button><button class=\"ds-seg__item\">自动</button><button class=\"ds-seg__item\" disabled>固定</button></div>",
+      "css": ".ds-seg{display:flex;border:1px solid #B6C2BA;border-radius:999px;overflow:hidden;background:transparent}.ds-seg__item{flex:1 1 0;min-width:0;height:40px;padding:0 12px;border:none;border-right:1px solid #B6C2BA;background:transparent;color:#1A1C1B;font:500 14px/1.43 Roboto,'Noto Sans SC',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .15s ease,color .15s ease}.ds-seg__item:last-child{border-right:none}.ds-seg__item:hover:not([disabled]){background:#F1F6F2}.ds-seg__item:focus-visible{outline:2px solid #006C4C;outline-offset:-2px}.ds-seg__item.is-selected{background:#CFF2E1;color:#00382A;font-weight:600}.ds-seg__item[disabled]{color:#9FAEA5;cursor:not-allowed}"
+    },
+    {
+      "name": "Preset Chip",
+      "kind": "chip",
+      "refersTo": "preset-chip-selected",
+      "description": "数值预设（×10 / ×50 …）；选中填充松雾，未选中描边。",
+      "html": "<button class=\"ds-chip is-selected\">×50</button><button class=\"ds-chip\">×100</button>",
+      "css": ".ds-chip{height:32px;padding:0 12px;border-radius:8px;border:1px solid #B6C2BA;background:transparent;color:#1A1C1B;font:500 12px/1.33 Roboto,'Noto Sans SC',sans-serif;cursor:pointer;transition:background .15s ease,border-color .15s ease}.ds-chip:hover{background:#F1F6F2}.ds-chip:focus-visible{outline:2px solid #006C4C;outline-offset:2px}.ds-chip.is-selected{background:#CFF2E1;border-color:#CFF2E1;color:#00382A}"
+    },
+    {
+      "name": "Log Row",
+      "kind": "custom",
+      "refersTo": "log-row",
+      "description": "诊断页日志行：时间 + 类型标 + 来源一行，等宽正文单独一行。",
+      "html": "<article class=\"ds-log\"><header class=\"ds-log__head\"><time class=\"ds-log__time\">14:06:26</time><span class=\"ds-log__tag\">信息</span><span class=\"ds-log__src\">框架 · service</span></header><p class=\"ds-log__msg\">service changed: unbound</p></article>",
+      "css": ".ds-log{background:#FFFFFF;border-radius:14px;padding:12px 14px;box-sizing:border-box}.ds-log__head{display:flex;align-items:center;gap:8px;margin-bottom:5px}.ds-log__time,.ds-log__msg{font:400 12px/1.33 ui-monospace,SFMono-Regular,Menlo,'Roboto Mono',monospace;color:#1A1C1B}.ds-log__time{color:#5B6B60}.ds-log__src{font:400 12px/1.33 Roboto,'Noto Sans SC',sans-serif;color:#5B6B60}.ds-log__tag{background:#EAF1EC;color:#1A1C1B;border-radius:7px;padding:2px 7px;font:500 11px/1.45 Roboto,'Noto Sans SC',sans-serif}.ds-log__msg{margin:0;overflow-wrap:anywhere}"
+    },
+    {
+      "name": "Settings Row",
+      "kind": "nav",
+      "refersTo": "settings-row",
+      "description": "分组列表行：24dp 线性图标 + 标题/副标题 + 右侧箭头或操作。",
+      "html": "<button class=\"ds-row\"><svg class=\"ds-row__icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 2a10 10 0 100 20 10 10 0 000-20zm0 2a8 8 0 110 16 8 8 0 010-16zM11 7h2v6h-2zm0 8h2v2h-2z\"/></svg><span class=\"ds-row__text\"><span class=\"ds-row__title\">语言</span><span class=\"ds-row__sub\">简体中文</span></span><svg class=\"ds-row__chev\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M9 6l6 6-6 6\"/></svg></button>",
+      "css": ".ds-row{display:flex;align-items:center;gap:16px;width:100%;min-height:68px;padding:16px;border:none;background:transparent;text-align:left;cursor:pointer;box-sizing:border-box;transition:background .15s ease}.ds-row:hover{background:#FAFCFA}.ds-row:focus-visible{outline:2px solid #006C4C;outline-offset:-2px}.ds-row__icon{flex:0 0 24px;width:24px;height:24px;fill:#006C4C}.ds-row__text{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}.ds-row__title{font:500 16px/1.5 Roboto,'Noto Sans SC',sans-serif;color:#1A1C1B}.ds-row__sub{font:400 14px/1.43 Roboto,'Noto Sans SC',sans-serif;color:#5B6B60;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ds-row__chev{flex:0 0 24px;width:24px;height:24px;fill:none;stroke:#5B6B60;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}"
+    },
+    {
+      "name": "Disconnected Notice",
+      "kind": "custom",
+      "refersTo": "card-surface",
+      "description": "未连接提示（当前实现是一张大卡；layout-audit 建议收敛为单行状态条）。",
+      "html": "<section class=\"ds-notice\"><header class=\"ds-notice__head\"><svg class=\"ds-notice__icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M12 2l10 18H2L12 2zm0 4.6L5.2 18h13.6L12 6.6zM11 10h2v4h-2zm0 5h2v2h-2z\"/></svg><h2 class=\"ds-notice__title\">LSPosed 服务未连接</h2></header><p class=\"ds-notice__body\">请在 LSPosed 管理器中启用本模块，勾选目标应用作为作用域，然后重启本应用。</p></section>",
+      "css": ".ds-notice{background:#FFDAD6;color:#410002;border-radius:16px;padding:16px;box-sizing:border-box}.ds-notice__head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.ds-notice__icon{flex:0 0 20px;width:20px;height:20px;fill:#BA1A1A}.ds-notice__title{margin:0;font:500 14px/1.43 Roboto,'Noto Sans SC',sans-serif}.ds-notice__body{margin:0;font:400 12px/1.33 Roboto,'Noto Sans SC',sans-serif}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Instrument",
+    "overview": "这套界面是一件仪器，不是一块仪表盘。它在一切正常时不说话：没有阴影、没有装饰性渐变、没有为每个状态准备的彩色胶囊；页面底色本身就承担了分层的职责，卡片只是比底色再亮一档。用户打开它的理由只有两个——确认某个 App 现在被改成什么样，或者把它改掉。其余的一切（版本号、框架版本、日志、包名）都被压到诊断页。语气是克制、可预测、低声的三层关系。克制体现在颜色配额：徽州松绿只出现在当前值、选中态、主要操作上，一屏不超过三处；可预测体现在位置：四个目标 App 常驻首页同一个位置，卡片头部永远是「图标 → 名称 → 当前规则 → 开关」，展开不改变这条轴；低声体现在文字：说明性文案用 12sp 的次级正文色，只有跨过阈值的数值才升到 24sp。唯一的表达留给状态本身——未连接时出现一条 errorContainer 提示，每日上限旁边出现一枚刻度尺，日志为空时出现一张手绘纸页。它们都是可在静止帧读懂的插画，不用动效讲信息。",
+    "keyCharacteristics": [
+      "纯色调分层：零阴影，卡片靠 Card White 与 Page Mist 的一档差 + 1dp 描边浮起",
+      "一张卡片 = 一个目标 App；展开就地编辑，不跳二级页",
+      "颜色是状态语言，不是装饰：绿 = 当前值/选中，红 = 需要处理",
+      "字阶完全等于 Material 3 基线，没有自定义字号",
+      "插画全部为 Canvas 手绘（断链、空纸、更新环、上限刻度），跟随主题与动态取色"
+    ],
+    "rules": [
+      {
+        "name": "The Pine Quota Rule",
+        "body": "徽州松一屏最多出现三处「活的」用法（当前值、选中态、主操作）。第四处出现即视为装饰，必须改回墨色。",
+        "section": "colors"
+      },
+      {
+        "name": "The Alert Is Earned Rule",
+        "body": "alert 与 alertWash 只回答一个问题：现在有没有东西坏了、需要用户动手？未启用、未安装、只读、空列表都不是告警，用墨次级色表达。",
+        "section": "colors"
+      },
+      {
+        "name": "The Wallpaper Substitution Rule",
+        "body": "Android 12+ 的动态取色是合法的第一优先级：壁纸主色会整组替换徽州松及其容器档。因此绿色是 fallback，真正的不变量是关系而非色值——页面底低于卡片、卡片高于页面、主色只占「活的」位置。",
+        "section": "colors"
+      },
+      {
+        "name": "The Baseline-Only Rule",
+        "body": "不新增字号、不写 fontSize 覆盖。要更强，用 weight 或颜色；要更弱，降一档字阶。",
+        "section": "typography"
+      },
+      {
+        "name": "The One Monospace Zone Rule",
+        "body": "等宽字体只属于诊断页的读数（时间、日志正文、环境值、配置串）。首页与设置页出现等宽字体即视为串味。",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Shadow Rule",
+        "body": "不加 shadowElevation。需要让一个面浮起来，就把它的 surfaceContainer 档提升一级或加 1dp 描边，不要加阴影。玻璃拟态与模糊背景是已确认的反参考。",
+        "section": "elevation"
+      },
+      {
+        "name": "The 16 / 12 Rule",
+        "body": "大面 16dp、卡内小块 12dp、胶囊 999dp。三个值之外的圆角必须能说出理由（当前只有日志行 14dp、日志标 7dp、指示条 2dp 三处）。",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do 让首页收起态一屏放下全部目标 App（4 个 × 80dp + 间距），异常提示只占一条而不是一张大卡。",
+      "Do 用 24sp 的数值 + 12sp 的说明建立层级：数字是主角，解释是注脚。",
+      "Do 用 16dp 包住每一个「可整体操作」的对象，内部再用 12dp 小块分组。",
+      "Do 在动态取色开启与关闭两种情况下各验证一次主色、告警色、卡片与页面底的关系。",
+      "Do 保持 48dp 以上的触摸目标，即使视觉尺寸更小。",
+      "Do 任何新增插画都用 Canvas + 主题色绘制，保证跟随深色与动态取色。"
+    ],
+    "donts": [
+      "Don't 加阴影或玻璃拟态；层级只用表面色差 + 1dp 描边表达。",
+      "Don't 把 alert 红用在中性状态上 —— 「未安装」「已关闭」「空日志」都不是告警。",
+      "Don't 为每个状态配一种颜色；主色一屏 ≤ 3 处「活的」用法。",
+      "Don't 新增字号或覆盖 fontSize；层级靠 weight 与颜色。",
+      "Don't 在诊断页之外使用等宽字体。",
+      "Don't 把 tab 条钉在屏幕底部当导航用 —— 诊断页三个视图属于同页切换，应贴在 AppBar 下方；二级页只靠系统返回手势退出，不新增抽屉或底部导航。",
+      "Don't 在卡片里重复全局状态：顶栏胶囊已经说明「已连接 / 未连接」，卡片摘要不再重复表达连接状态。"
+    ]
+  }
+}
