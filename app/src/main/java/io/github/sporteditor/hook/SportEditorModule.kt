@@ -9,7 +9,6 @@ import io.github.libxposed.api.XposedModuleInterface.HotReloadingParam
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
 import io.github.sporteditor.data.AppTarget
-import io.github.sporteditor.data.DailyLimit
 import io.github.sporteditor.data.SettingsKeys
 import io.github.sporteditor.debug.DebugLogLevel
 import io.github.sporteditor.debug.DebugLogSender
@@ -72,24 +71,19 @@ class SportEditorModule : XposedModule() {
                     sendDebug(DebugLogType.HOOK, message)
                 },
                 onStepSample = { sample ->
-                    // Structured key=value line so the diagnostics screen can parse it back.
-                    val message = buildString {
-                        append("step sensor=").append(sensorTypeName(sample.sensorType))
-                        append(" type=").append(sample.sensorType)
-                        append(" raw=").append(sample.raw)
-                        append(" -> reported=").append(sample.reported)
-                        append(" mode=").append(sample.settings.mode.name)
-                        append(" value=").append(sample.settings.value)
-                        append(" limit=").append(DailyLimit.effectiveToday(sample.settings.maxSteps))
-                    }
+                    // Structured key=value line so the diagnostics screen can parse it back and
+                    // show the whole calculation without logcat.
+                    val message = StepTraceLog.sample(sensorTypeName(sample.sensorType), sample.sensorType, sample.trace)
                     log(Log.INFO, TAG, message)
                     sendDebug(DebugLogType.HOOK, message)
                 },
                 onStepSummary = { summary ->
-                    val message = "step summary sensor=" + sensorTypeName(summary.sensorType) +
-                        " events=" + summary.events +
-                        " raw=" + summary.raw +
-                        " -> reported=" + summary.reported
+                    val message = StepTraceLog.summary(sensorTypeName(summary.sensorType), summary.events, summary.trace)
+                    log(Log.INFO, TAG, message)
+                    sendDebug(DebugLogType.HOOK, message)
+                },
+                onStepRollover = { rollover ->
+                    val message = StepTraceLog.rollover(sensorTypeName(rollover.sensorType), rollover.sensorType, rollover.trace)
                     log(Log.INFO, TAG, message)
                     sendDebug(DebugLogType.HOOK, message)
                 }

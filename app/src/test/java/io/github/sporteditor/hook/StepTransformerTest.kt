@@ -67,16 +67,15 @@ class StepTransformerTest {
     }
 
     @Test
-    fun auto_restartsAfterCap() {
-        val transformer = StepTransformer()
-        val config = settings(StepMode.AUTO, 60_000)
+    fun auto_growsUntilTheDailyBudgetIsExhausted() {
+        val transformer = transformer()
+        val config = settings(StepMode.AUTO, 60_000, maxSteps = 100_000)
 
-        // 0, 60000, then 120000 > AUTO_CAP resets the counter for the day.
+        // 0, 60000, then 120000: the day's increment is capped at 100000 instead of restarting.
         assertEquals(0f, transformer.transform(1_000f, config), 0.001f)
         assertEquals(60_000f, transformer.transform(1_000f, config), 0.001f)
-        assertEquals(0f, transformer.transform(1_000f, config), 0.001f)
-        assertEquals(0f, transformer.transform(1_000f, config), 0.001f)
-        assertEquals(60_000f, transformer.transform(1_000f, config), 0.001f)
+        assertEquals(100_000f, transformer.transform(1_000f, config), 0.001f)
+        assertEquals(100_000f, transformer.transform(1_000f, config), 0.001f)
     }
 
     @Test
@@ -105,16 +104,17 @@ class StepTransformerTest {
     }
 
     @Test
-    fun loweringMaxSteps_stopsGrowthImmediately() {
+    fun loweringMaxSteps_stopsGrowthWithoutABackwardJump() {
         val transformer = transformer()
         val original = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
         val lowered = settings(StepMode.MULTIPLY, 1, maxSteps = 30_000)
 
         assertEquals(0f, transformer.transform(2_500f, original), 0.001f)
         assertEquals(50_000f, transformer.transform(60_000f, original), 0.001f)
-        // The user lowers the cap mid-day: today's increment never exceeds the new value.
-        assertEquals(30_000f, transformer.transform(90_000f, lowered), 0.001f)
-        assertEquals(30_000f, transformer.transform(150_000f, lowered), 0.001f)
+        // The app already saw 50000 today. Lowering the cap stops growth, but never emits a
+        // smaller counter: the app would treat that as a reset and freeze.
+        assertEquals(50_000f, transformer.transform(90_000f, lowered), 0.001f)
+        assertEquals(50_000f, transformer.transform(150_000f, lowered), 0.001f)
     }
 
     @Test
@@ -138,14 +138,14 @@ class StepTransformerTest {
         assertEquals(80_010f, transformer.transform(100_000f, config), 0.001f)
 
         today = today.plusDays(1)
-        // The carried value is below day 2's budget, so it flows on; day 2's total stays
-        // capped at 80_000 + 90 and never resumes the unbounded accumulation.
+        // Day 2 carries the absolute counter and adds its own budget instead of freezing at the
+        // limit the way 1.4.0 did.
         assertEquals(80_010f, transformer.transform(100_000f, config), 0.001f)
-        assertEquals(80_090f, transformer.transform(200_000f, config), 0.001f)
+        assertEquals(160_100f, transformer.transform(200_000f, config), 0.001f)
     }
 
     @Test
-    fun dayRollover_keepsTheReportedValueInsideTheDailyLimit() {
+    fun dayRollover_continuesTheAbsoluteCounterAndCapsOnlyTheDayIncrement() {
         val store = MemoryStore()
         var today = LocalDate.of(2026, 10, 22)
         val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
@@ -158,16 +158,16 @@ class StepTransformerTest {
         val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
         // The first event of the new day has no delta, so the target app never sees a jump.
         assertEquals(80_000f, second.transform(100_000f, config), 0.001f)
-        // The carried value already saturated the budget; day 2 stays inside its own limit.
-        assertEquals(80_000f, second.transform(180_000f, config), 0.001f)
+        // Day 2 gets its own budget and keeps growing instead of freezing at the limit.
+        assertEquals(160_000f, second.transform(180_000f, config), 0.001f)
+        assertEquals(160_000f, second.transform(280_000f, config), 0.001f)
     }
 
     @Test
-    fun carriedOverflow_isCappedAtTheDailyLimit() {
+    fun carriedValue_keepsTheAbsoluteCounterBeyondTheDailyLimit() {
         val store = MemoryStore()
         val today = LocalDate.of(2026, 10, 22)
-        // Legacy state from a previous version: yesterday's reported value ran way past the day
-        // budget because the old implementation carried it without capping.
+        // Yesterday ended above today's budget because 1.4.0 carried an unbounded value.
         store.state = DailyState(
             epochDay = today.toEpochDay() - 1,
             baselineRaw = 0f,
@@ -177,17 +177,21 @@ class StepTransformerTest {
             dailyLimit = 50_000,
             lastReported = 63_783f,
             autoCount = 0,
-            version = 1,
+            version = StepTransformer.STATE_VERSION,
             lastElapsed = 1_000L
         )
         val config = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
-        val transformer = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 0 },
+            store = store,
+            elapsedRealtime = { 2_000L }
+        )
 
-        // The first event of the new day carries lastReported, clamped down to today's budget;
-        // every further event stays inside the limit as well.
-        assertEquals(50_000f, transformer.transform(12_000f, config), 0.001f)
-        assertEquals(50_000f, transformer.transform(100_000f, config), 0.001f)
-        assertEquals(50_000f, transformer.transform(200_000f, config), 0.001f)
+        // Yesterday's reported value is carried as-is; only today's increment is capped.
+        assertEquals(63_783f, transformer.transform(12_000f, config), 0.001f)
+        assertEquals(113_783f, transformer.transform(62_000f, config), 0.001f)
+        assertEquals(113_783f, transformer.transform(112_000f, config), 0.001f)
     }
 
     @Test
@@ -268,7 +272,7 @@ class StepTransformerTest {
     }
 
     @Test
-    fun legacyAbsoluteState_migratesWithoutBackwardJump() {
+    fun legacyAbsoluteState_migratesWithoutJumpAndResumesGrowth() {
         val store = MemoryStore()
         val today = LocalDate.of(2026, 10, 22)
         store.state = DailyState(
@@ -285,10 +289,43 @@ class StepTransformerTest {
         val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
         val transformer = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
 
-        // The v1.2 state counted from an absolute value; the upgrade keeps the carried value
-        // (it already equals today's budget) and freezes the day at the cap.
+        // The upgrade keeps the absolute value, drops the part of today the old state already
+        // counted and rebases the raw reading, so the counter resumes growing without a jump.
         assertEquals(80_000f, transformer.transform(50_000f, config), 0.001f)
-        assertEquals(80_000f, transformer.transform(100_000f, config), 0.001f)
+        assertEquals(130_000f, transformer.transform(100_000f, config), 0.001f)
+    }
+
+    @Test
+    fun realDevicePinnedState_resumesGrowingAfterUpgrade() {
+        val store = MemoryStore()
+        val today = LocalDate.of(2026, 10, 30)
+        // State written by 1.4.0 on the real device (WeChat): the day started at and stayed on
+        // the 20_025 cap, so 微信运动 saw the same counter all day.
+        store.state = DailyState(
+            epochDay = today.toEpochDay(),
+            baselineRaw = 2_065f,
+            lastRaw = 2_133f,
+            rawDeltaOffset = 0f,
+            dayStartReported = 20_025f,
+            dailyLimit = 20_025,
+            lastReported = 20_025f,
+            autoCount = 0,
+            version = 1,
+            lastElapsed = 589_232_969L
+        )
+        val config = settings(StepMode.MULTIPLY, 500, maxSteps = 20_000)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 25 },
+            store = store,
+            elapsedRealtime = { 589_240_000L }
+        )
+
+        // The upgrade keeps the reported value and rebases the raw baseline; the next real steps
+        // increase the counter again instead of leaving it pinned at the cap.
+        assertEquals(20_025f, transformer.transform(2_133f, config), 0.001f)
+        assertEquals(21_025f, transformer.transform(2_135f, config), 0.001f)
+        assertEquals(25_025f, transformer.transform(2_143f, config), 0.001f)
     }
 
     @Test
@@ -303,10 +340,10 @@ class StepTransformerTest {
 
         today = today.plusDays(1)
         val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
-        // The carried value cannot exceed the budget any more, so the reported value stays at
-        // the cap instead of accumulating beyond the app's own bounds.
-        assertEquals(9_000_000f, second.transform(9_000_000f, config), 0.001f)
-        assertEquals(9_000_000f, second.transform(9_100_000f, config), 0.001f)
+        // 9_000_000 + a 9_000_000 budget would overflow the app's counter, so day 2 restarts at
+        // zero like a sensor reset instead of freezing at MAX_STEPS.
+        assertEquals(0f, second.transform(9_000_000f, config), 0.001f)
+        assertEquals(100_000f, second.transform(9_100_000f, config), 0.001f)
     }
 
     @Test
@@ -356,7 +393,7 @@ class StepTransformerTest {
     }
 
     @Test
-    fun simulatedWeekWithReboot_staysWithinTheLimitAndBucketedPerDay() {
+    fun simulatedWeekWithReboot_staysWithinTheDailyBudgetAndKeepsTheCounterContinuous() {
         val store = MemoryStore()
         var today = LocalDate.of(2026, 10, 22)
         var raw = 0f
@@ -378,13 +415,7 @@ class StepTransformerTest {
                 val now = transformer.transform(raw, config)
                 assertTrue("absolute value must not decrease", now >= last - 0.001f)
                 assertTrue("day $dayIndex increment ${now - dayStart} exceeds budget", now - dayStart <= 50_000.001f)
-                assertTrue("day $dayIndex reported $now above the limit", now <= 50_000.001f)
                 last = now
-            }
-            val dayIncrement = last - dayStart
-            // Days may run into the cap and freeze; once frozen no day may exceed the limit.
-            if (dayIncrement > 0f) {
-                assertTrue("day $dayIndex increment $dayIncrement exceeds budget", dayIncrement <= 50_000.001f)
             }
             if (dayIndex == 3) {
                 // Reboot overnight: raw and elapsedRealtime restart at zero.
@@ -393,6 +424,10 @@ class StepTransformerTest {
             }
             today = today.plusDays(1)
         }
+
+        // Seven days of 14_000 each: the counter must keep growing across days instead of
+        // freezing at the first day's budget.
+        assertTrue("reported=$last", last > 50_000f)
     }
 
     @Test
@@ -422,5 +457,133 @@ class StepTransformerTest {
 
         assertTrue("reports=$seen", seen.all { it >= 0f && it <= 80_100f })
         assertEquals(80_100f, seen.last(), 0.001f)
+    }
+
+    @Test
+    fun trace_recordsTheDayCalculation() {
+        val today = LocalDate.of(2026, 10, 30)
+        val transformer = StepTransformer(clock = { today }, extraSteps = { 25 })
+        val config = settings(StepMode.MULTIPLY, 500, maxSteps = 20_000)
+
+        val first = transformer.transformDetailed(2_133f, config)
+        assertEquals(listOf(StepRollover.NEW_DAY), first.trace.rollovers)
+        assertEquals(0f, first.trace.dayStartReported, 0.001f)
+
+        val second = transformer.transformDetailed(2_143f, config)
+        assertEquals(today.toEpochDay(), second.trace.epochDay)
+        assertEquals(2_133f, second.trace.baselineRaw, 0.001f)
+        assertEquals(10f, second.trace.rawDelta, 0.001f)
+        assertEquals(5_000f, second.trace.increment, 0.001f)
+        assertEquals(20_025, second.trace.limit)
+        assertEquals(0f, second.trace.dayStartReported, 0.001f)
+        assertEquals(5_000f, second.trace.reported, 0.001f)
+        assertEquals(StepMode.MULTIPLY, second.trace.mode)
+        assertEquals(500, second.trace.value)
+        assertEquals(StepTransformer.STATE_VERSION, second.trace.schemaVersion)
+        assertEquals(emptyList<StepRollover>(), second.trace.rollovers)
+        assertEquals(false, second.trace.held)
+    }
+
+    @Test
+    fun trace_marksTheDayRollover() {
+        val store = MemoryStore()
+        var today = LocalDate.of(2026, 10, 30)
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+        val first = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        first.transformDetailed(0f, config)
+        first.transformDetailed(100_000f, config)
+
+        today = today.plusDays(1)
+        val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        val result = second.transformDetailed(100_000f, config)
+        assertEquals(listOf(StepRollover.NEW_DAY), result.trace.rollovers)
+        assertEquals(80_000f, result.trace.dayStartReported, 0.001f)
+        assertEquals(80_000f, result.trace.reported, 0.001f)
+    }
+
+    @Test
+    fun trace_marksAReboot() {
+        val today = LocalDate.of(2026, 10, 30)
+        var elapsed = 100_000L
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 0 },
+            elapsedRealtime = { elapsed }
+        )
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+        transformer.transformDetailed(0f, config)
+        transformer.transformDetailed(1_000f, config)
+
+        elapsed = 1L
+        val result = transformer.transformDetailed(0f, config)
+        assertTrue(result.trace.rollovers.contains(StepRollover.REBOOT))
+    }
+
+    @Test
+    fun trace_marksAMigration() {
+        val today = LocalDate.of(2026, 10, 30)
+        val store = MemoryStore()
+        store.state = DailyState(
+            epochDay = today.toEpochDay(),
+            baselineRaw = 2_065f,
+            lastRaw = 2_133f,
+            rawDeltaOffset = 0f,
+            dayStartReported = 20_025f,
+            dailyLimit = 20_025,
+            lastReported = 20_025f,
+            autoCount = 0,
+            version = 1
+        )
+        val config = settings(StepMode.MULTIPLY, 500, maxSteps = 20_000)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 25 },
+            store = store,
+            elapsedRealtime = { 1L }
+        )
+
+        val result = transformer.transformDetailed(2_133f, config)
+        assertEquals(listOf(StepRollover.MIGRATION), result.trace.rollovers)
+        assertEquals(20_025f, result.trace.reported, 0.001f)
+        assertEquals(2_133f, result.trace.baselineRaw, 0.001f)
+    }
+
+    @Test
+    fun trace_marksAHeldReportWhenTheCapIsLowered() {
+        val transformer = transformer()
+        val original = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
+        val lowered = settings(StepMode.MULTIPLY, 1, maxSteps = 30_000)
+
+        transformer.transformDetailed(2_500f, original)
+        val high = transformer.transformDetailed(60_000f, original)
+        assertEquals(50_000f, high.trace.reported, 0.001f)
+        assertEquals(false, high.trace.held)
+
+        val low = transformer.transformDetailed(90_000f, lowered)
+        assertEquals(true, low.trace.held)
+        assertEquals(50_000f, low.trace.reported, 0.001f)
+        assertEquals(30_000f, low.trace.increment, 0.001f)
+    }
+
+    @Test
+    fun trace_reportsTheAutoCallbackIndex() {
+        val transformer = transformer()
+        val config = settings(StepMode.AUTO, 10_000, maxSteps = 100_000)
+
+        assertEquals(0, transformer.transformDetailed(1_000f, config).trace.autoCount)
+        assertEquals(1, transformer.transformDetailed(1_000f, config).trace.autoCount)
+        assertEquals(2, transformer.transformDetailed(1_000f, config).trace.autoCount)
+    }
+
+    @Test
+    fun detectorTrace_accumulatesTheDayDelta() {
+        val transformer = detector()
+        val config = settings(StepMode.MULTIPLY, 100, maxSteps = 80_000)
+
+        transformer.transformDetailed(1f, config)
+        val result = transformer.transformDetailed(1f, config)
+        assertEquals(2f, result.trace.rawDelta, 0.001f)
+        assertEquals(200f, result.trace.increment, 0.001f)
+        assertTrue(result.trace.incremental)
     }
 }

@@ -720,23 +720,22 @@ private fun EnvironmentPage(state: SettingsState, entriesSize: Int) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     // Was a grey box inside a card: a container standing in for proximity. The same
                     // grouping is now carried by a label above its value, like every other fact here.
-                    Row(
+                    // The framework name can be much longer than the card, so a side-by-side row
+                    // squeezed the label to zero width and wrapped 框架 into a vertical stack.
+                    Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
                             text = stringResource(R.string.debug_framework),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = (state.frameworkName ?: "—") + " " + (state.frameworkVersion ?: "") +
                                 " · API " + (state.apiVersion ?: 0),
                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -930,8 +929,9 @@ private fun AppsPage(state: SettingsState, entries: List<DebugLogEntry>) {
     }
 
     // 最近一条步数传感器日志（Hook 以包名为 source 广播），用于展示目标 App 实际收到的值。
+    // 只保留能解析出 raw/reported 的 sample/summary，避免 `step rollover` 行覆盖掉最近值。
     val latestSensors = entries
-        .filter { it.type == DebugLogType.HOOK && it.message.startsWith("step ") }
+        .filter { it.type == DebugLogType.HOOK && SensorEventLog.parse(it.message) != null }
         .groupBy { it.source }
         .mapValues { (_, list) -> list.maxBy { it.time } }
     val visible = when (quickFilter) {
@@ -1121,6 +1121,14 @@ private fun AppRow(snapshot: TargetSnapshot, detail: Boolean, lastSensor: DebugL
                         style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    val calculation = sensorEvent?.let(SensorEventLog::describeCalculation)
+                    if (calculation != null) {
+                        Text(
+                            text = stringResource(R.string.debug_sensor_calc, calculation),
+                            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
