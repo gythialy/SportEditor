@@ -1199,11 +1199,7 @@ private fun ConnectionSheet(state: SettingsState, onDismiss: () -> Unit) {
 private fun previewText(mode: StepMode, value: Int, effectiveLimit: Int): String {
     val sampleSteps = 1_000
     if (mode == StepMode.AUTO) {
-        return stringResource(
-            R.string.preview_auto,
-            formatNumber(value),
-            formatNumber(TargetSettings.AUTO_CAP)
-        )
+        return stringResource(R.string.preview_auto, formatNumber(value))
     }
 
     // Show what the strategy itself produces; the effective daily limit is displayed once, in the

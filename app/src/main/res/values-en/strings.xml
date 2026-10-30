@@ -60,7 +60,7 @@
     <string name="mode_short_replace">Fixed</string>
 
     <string name="preview_target">At %1$s real steps → %2$s steps</string>
-    <string name="preview_auto">Adds %1$s per callback, resets after %2$s</string>
+    <string name="preview_auto">Adds %1$s per callback, capped by the daily max</string>
     <string name="preview_replace">Always reports %1$s steps</string>
     <string name="preview_capped">capped</string>
 

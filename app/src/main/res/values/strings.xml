@@ -60,7 +60,7 @@
     <string name="mode_short_replace">固定</string>
 
     <string name="preview_target">按实际 %1$s 步计算 → %2$s 步</string>
-    <string name="preview_auto">每次回调 +%1$s 步，累计 %2$s 后重置</string>
+    <string name="preview_auto">每次回调 +%1$s 步，按今日上限封顶</string>
     <string name="preview_replace">固定返回 %1$s 步</string>
     <string name="preview_capped">封顶</string>
 

@@ -7,7 +7,7 @@ data class TargetSettings(
     val enabled: Boolean,
     val mode: StepMode,
     val value: Int,
-    /** Reported sensor values are capped at this value. */
+    /** Upper bound of the steps added on one local day (not of the absolute sensor counter). */
     val maxSteps: Int = DEFAULT_MAX_STEPS
 ) {
     fun normalized(): TargetSettings = copy(
@@ -23,9 +23,6 @@ data class TargetSettings(
         const val MAX_MULTIPLIER = 10_000
         const val MIN_MAX_STEPS = 1
         const val DEFAULT_MAX_STEPS = 80_000
-
-        /** Largest sum added by the auto-increment strategy before it restarts. */
-        const val AUTO_CAP = 100_000
 
         fun maxValueFor(mode: StepMode): Int = if (mode == StepMode.MULTIPLY) MAX_MULTIPLIER else MAX_VALUE
 

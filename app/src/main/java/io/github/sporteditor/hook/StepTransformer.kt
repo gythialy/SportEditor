@@ -13,13 +13,16 @@ import java.time.LocalDate
  * but every local day gets its own budget:
  *
  *  - The first event of a day records the raw baseline and carries the previous day's last
- *    reported value as today's starting point, capped at the day's budget so the app never sees
- *    a value above the configured max steps, even across days.
+ *    reported value as today's starting point, so the absolute counter stays continuous and the
+ *    target app never sees a backward jump at midnight.
  *  - Within the day only the raw delta since the baseline is transformed:
  *    MULTIPLY/ADD use `delta * value` / `delta + value`, REPLACE reports a constant value and
- *    AUTO adds `value` per callback. The reported total is capped by the day's budget.
+ *    AUTO adds `value` per callback. Only the day's increment is capped by the day's budget;
+ *    the absolute counter keeps growing across days, so the target app's own daily delta stays
+ *    positive instead of freezing at the limit after the first day.
  *  - The budget is [TargetSettings.maxSteps] plus [DailyLimit]'s per-day jitter (0..100).
- *    Lowering the limit mid-day takes effect immediately: the total drops to the new cap.
+ *    Lowering the limit mid-day takes effect immediately: the reported value stops growing
+ *    without jumping backwards.
  *  - A device reboot is detected through `SystemClock.elapsedRealtime()` (it restarts at zero
  *    on boot), so the counter baseline is reset to zero and the steps taken since boot are
  *    counted even when the first event arrives after the raw value already surpassed the last
@@ -33,9 +36,10 @@ import java.time.LocalDate
  * step. Set [incremental] for it so each event is added to the day's delta instead of being
  * compared with a raw baseline.
  *
- * State is persisted through [DailyStateStore]; states written before daily accumulation
- * (version 0) are migrated on first use so the target app does not see a negative jump.
- * The class is intentionally free of Android dependencies so it can be unit tested.
+ * State is persisted through [DailyStateStore]; states written by earlier versions (schema
+ * versions 0 and 1) are migrated on first use so the target app does not see a negative jump
+ * and the counter is not pinned at the daily limit. The class is intentionally free of Android
+ * dependencies so it can be unit tested.
  */
 internal class StepTransformer(
     private val clock: () -> LocalDate = { LocalDate.now() },
@@ -74,14 +78,15 @@ internal class StepTransformer(
         val newDay = day != today
         val rebooted = elapsedRealtime() < lastElapsed
         val counterReset = raw < lastRaw
-        if (newDay || counterReset || rebooted) {
+        val rolledOver = newDay || counterReset || rebooted
+        if (rolledOver) {
             beginPeriod(today, raw, settings, counterReset = counterReset, rebooted = rebooted)
         }
 
         val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         dailyLimit = limit
 
-        if (incremental) return transformIncremental(raw, settings, today, limit)
+        if (incremental) return transformIncremental(raw, settings, limit, rolledOver)
 
         // Only today's raw delta is transformed; lastRaw/baseline keep the day's progress across
         // a reboot without ever re-counting the same steps.
@@ -95,7 +100,7 @@ internal class StepTransformer(
 
         lastRaw = raw
         lastElapsed = elapsedRealtime()
-        lastReported = sanitize(reported)
+        lastReported = settle(reported, rolledOver)
         persist()
         return lastReported
     }
@@ -104,14 +109,9 @@ internal class StepTransformer(
      * `TYPE_STEP_DETECTOR` events are independent steps (value 1.0 each), so they are summed
      * into the day's delta instead of being differenced against a cumulative baseline.
      */
-    private fun transformIncremental(raw: Float, settings: TargetSettings, today: LocalDate, limit: Int): Float {
-        if (day != today) {
-            dayStartReported = carriedValue(limit)
-            rawDeltaOffset = 0f
-            autoCount = 0
-            day = today
-        }
-
+    private fun transformIncremental(raw: Float, settings: TargetSettings, limit: Int, rolledOver: Boolean): Float {
+        // Day rollover, reboot and counter rollback are already handled by beginPeriod(); the
+        // detector stream only appends this event to the day's delta.
         val delta = rawDeltaOffset + raw.coerceAtLeast(0f)
         rawDeltaOffset = delta
         val reported = when (settings.mode) {
@@ -122,7 +122,7 @@ internal class StepTransformer(
         }
 
         lastRaw = raw
-        lastReported = sanitize(reported)
+        lastReported = settle(reported, rolledOver)
         persist()
         return lastReported
     }
@@ -144,20 +144,23 @@ internal class StepTransformer(
     }
 
     /**
-     * Version 0 capped the absolute value and never accumulated a daily delta. Keep whatever the
-     * app already displays, reset the raw baseline to the current reading and let the remaining
-     * budget accumulate from now on; the app therefore never sees a negative jump on upgrade.
+     * Version 0 capped the absolute value, and version 1 carried that capped value into the next
+     * day, which pinned the reported counter at the daily limit. Keep the absolute counter
+     * continuous, reset the raw baseline to the current reading and start today's delta from zero:
+     * the target app sees no jump on upgrade and resumes growing immediately.
      */
     private fun migrate(raw: Float, settings: TargetSettings, today: LocalDate) {
+        val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         day = today
         baselineRaw = raw
         lastRaw = raw
         rawDeltaOffset = 0f
-        // v1.2 carried an unbounded absolute value; align it with the day's budget so the
-        // reported value lands inside max steps after the upgrade.
-        lastReported = lastReported.coerceAtMost(DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay())).toFloat())
-        dayStartReported = lastReported
-        dailyLimit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
+        // Drop the part of today that the old implementation already counted instead of applying
+        // the whole day's budget to the first event after the upgrade.
+        val carried = if (lastReported + limit > MAX_STEPS) 0f else lastReported
+        dayStartReported = carried
+        lastReported = carried
+        dailyLimit = limit
         autoCount = 0
         lastElapsed = elapsedRealtime()
         needsMigration = false
@@ -186,8 +189,8 @@ internal class StepTransformer(
         val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         val startingNewDay = day != today
         if (startingNewDay) {
-            // The carried value is capped at the new day's budget: yesterday's unconverted
-            // overflow never leaks into today's reported number.
+            // Carry the absolute counter so the app's own daily delta stays positive; only an
+            // imminent MAX_STEPS overflow restarts it from zero.
             dayStartReported = carriedValue(limit)
             rawDeltaOffset = 0f
             autoCount = 0
@@ -204,20 +207,37 @@ internal class StepTransformer(
         day = today
     }
 
-    /** Carries yesterday's reported value into a new day, capped at its budget. */
-    private fun carriedValue(limit: Int): Float = if (day == null) 0f else lastReported.coerceAtMost(limit.toFloat())
+    /**
+     * Carries yesterday's reported value into a new day so the target app keeps a continuous
+     * counter. The only exception is an imminent overflow of [MAX_STEPS]: the counter then
+     * restarts at zero, which target apps treat like a sensor reset.
+     */
+    private fun carriedValue(limit: Int): Float {
+        if (day == null) return 0f
+        return if (lastReported + limit > MAX_STEPS) 0f else lastReported
+    }
 
-    private fun clampDaily(increment: Float, limit: Int): Float =
-        (dayStartReported + increment.coerceIn(0f, limit.toFloat())).coerceAtMost(limit.toFloat())
+    /** Adds the day's increment to the carried value; only the increment is capped. */
+    private fun clampDaily(increment: Float, limit: Int): Float = dayStartReported + increment.coerceIn(0f, limit.toFloat())
 
+    /**
+     * AUTO adds [TargetSettings.value] per callback; the increment grows with the callback count
+     * and is capped by the day's budget like every other mode.
+     */
     private fun autoValue(limit: Int, settings: TargetSettings): Float {
         val increment = settings.value.toLong() * autoCount
-        if (increment > TargetSettings.AUTO_CAP) {
-            autoCount = 0
-            return clampDaily(0f, limit)
-        }
         autoCount++
         return clampDaily(increment.toFloat(), limit)
+    }
+
+    /**
+     * Reports the new value unless it would move the counter backwards within the same day.
+     * Lowering [TargetSettings.maxSteps] must stop growth, not emit a smaller counter: target
+     * apps treat the drop as a sensor reset and freeze the displayed step count.
+     */
+    private fun settle(reported: Float, rolledOver: Boolean): Float {
+        val next = sanitize(reported)
+        return if (rolledOver || next >= lastReported) next else lastReported
     }
 
     private fun sanitize(value: Float): Float = when {
@@ -229,7 +249,7 @@ internal class StepTransformer(
 
     companion object {
         /** Schema version persisted in [DailyState.version]. */
-        const val STATE_VERSION = 1
+        const val STATE_VERSION = 2
 
         /** Upper bound reported to target apps to avoid overflow in their own math. */
         const val MAX_STEPS = 9_999_999f
