@@ -458,4 +458,132 @@ class StepTransformerTest {
         assertTrue("reports=$seen", seen.all { it >= 0f && it <= 80_100f })
         assertEquals(80_100f, seen.last(), 0.001f)
     }
+
+    @Test
+    fun trace_recordsTheDayCalculation() {
+        val today = LocalDate.of(2026, 10, 30)
+        val transformer = StepTransformer(clock = { today }, extraSteps = { 25 })
+        val config = settings(StepMode.MULTIPLY, 500, maxSteps = 20_000)
+
+        val first = transformer.transformDetailed(2_133f, config)
+        assertEquals(listOf(StepRollover.NEW_DAY), first.trace.rollovers)
+        assertEquals(0f, first.trace.dayStartReported, 0.001f)
+
+        val second = transformer.transformDetailed(2_143f, config)
+        assertEquals(today.toEpochDay(), second.trace.epochDay)
+        assertEquals(2_133f, second.trace.baselineRaw, 0.001f)
+        assertEquals(10f, second.trace.rawDelta, 0.001f)
+        assertEquals(5_000f, second.trace.increment, 0.001f)
+        assertEquals(20_025, second.trace.limit)
+        assertEquals(0f, second.trace.dayStartReported, 0.001f)
+        assertEquals(5_000f, second.trace.reported, 0.001f)
+        assertEquals(StepMode.MULTIPLY, second.trace.mode)
+        assertEquals(500, second.trace.value)
+        assertEquals(StepTransformer.STATE_VERSION, second.trace.schemaVersion)
+        assertEquals(emptyList<StepRollover>(), second.trace.rollovers)
+        assertEquals(false, second.trace.held)
+    }
+
+    @Test
+    fun trace_marksTheDayRollover() {
+        val store = MemoryStore()
+        var today = LocalDate.of(2026, 10, 30)
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+        val first = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        first.transformDetailed(0f, config)
+        first.transformDetailed(100_000f, config)
+
+        today = today.plusDays(1)
+        val second = StepTransformer(clock = { today }, extraSteps = { 0 }, store = store)
+        val result = second.transformDetailed(100_000f, config)
+        assertEquals(listOf(StepRollover.NEW_DAY), result.trace.rollovers)
+        assertEquals(80_000f, result.trace.dayStartReported, 0.001f)
+        assertEquals(80_000f, result.trace.reported, 0.001f)
+    }
+
+    @Test
+    fun trace_marksAReboot() {
+        val today = LocalDate.of(2026, 10, 30)
+        var elapsed = 100_000L
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 0 },
+            elapsedRealtime = { elapsed }
+        )
+        val config = settings(StepMode.MULTIPLY, 1, maxSteps = 80_000)
+        transformer.transformDetailed(0f, config)
+        transformer.transformDetailed(1_000f, config)
+
+        elapsed = 1L
+        val result = transformer.transformDetailed(0f, config)
+        assertTrue(result.trace.rollovers.contains(StepRollover.REBOOT))
+    }
+
+    @Test
+    fun trace_marksAMigration() {
+        val today = LocalDate.of(2026, 10, 30)
+        val store = MemoryStore()
+        store.state = DailyState(
+            epochDay = today.toEpochDay(),
+            baselineRaw = 2_065f,
+            lastRaw = 2_133f,
+            rawDeltaOffset = 0f,
+            dayStartReported = 20_025f,
+            dailyLimit = 20_025,
+            lastReported = 20_025f,
+            autoCount = 0,
+            version = 1
+        )
+        val config = settings(StepMode.MULTIPLY, 500, maxSteps = 20_000)
+        val transformer = StepTransformer(
+            clock = { today },
+            extraSteps = { 25 },
+            store = store,
+            elapsedRealtime = { 1L }
+        )
+
+        val result = transformer.transformDetailed(2_133f, config)
+        assertEquals(listOf(StepRollover.MIGRATION), result.trace.rollovers)
+        assertEquals(20_025f, result.trace.reported, 0.001f)
+        assertEquals(2_133f, result.trace.baselineRaw, 0.001f)
+    }
+
+    @Test
+    fun trace_marksAHeldReportWhenTheCapIsLowered() {
+        val transformer = transformer()
+        val original = settings(StepMode.MULTIPLY, 1, maxSteps = 50_000)
+        val lowered = settings(StepMode.MULTIPLY, 1, maxSteps = 30_000)
+
+        transformer.transformDetailed(2_500f, original)
+        val high = transformer.transformDetailed(60_000f, original)
+        assertEquals(50_000f, high.trace.reported, 0.001f)
+        assertEquals(false, high.trace.held)
+
+        val low = transformer.transformDetailed(90_000f, lowered)
+        assertEquals(true, low.trace.held)
+        assertEquals(50_000f, low.trace.reported, 0.001f)
+        assertEquals(30_000f, low.trace.increment, 0.001f)
+    }
+
+    @Test
+    fun trace_reportsTheAutoCallbackIndex() {
+        val transformer = transformer()
+        val config = settings(StepMode.AUTO, 10_000, maxSteps = 100_000)
+
+        assertEquals(0, transformer.transformDetailed(1_000f, config).trace.autoCount)
+        assertEquals(1, transformer.transformDetailed(1_000f, config).trace.autoCount)
+        assertEquals(2, transformer.transformDetailed(1_000f, config).trace.autoCount)
+    }
+
+    @Test
+    fun detectorTrace_accumulatesTheDayDelta() {
+        val transformer = detector()
+        val config = settings(StepMode.MULTIPLY, 100, maxSteps = 80_000)
+
+        transformer.transformDetailed(1f, config)
+        val result = transformer.transformDetailed(1f, config)
+        assertEquals(2f, result.trace.rawDelta, 0.001f)
+        assertEquals(200f, result.trace.increment, 0.001f)
+        assertTrue(result.trace.incremental)
+    }
 }

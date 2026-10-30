@@ -10,7 +10,6 @@ import android.util.SparseArray
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import io.github.sporteditor.data.AppTarget
-import io.github.sporteditor.data.TargetSettings
 import java.lang.reflect.Field
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -36,7 +35,8 @@ internal class SensorHookInstaller(
     private val onContext: ((Context) -> Unit)? = null,
     private val onSensorRegistered: ((type: Int, handle: Int) -> Unit)? = null,
     private val onStepSample: ((StepSample) -> Unit)? = null,
-    private val onStepSummary: ((StepSummary) -> Unit)? = null
+    private val onStepSummary: ((StepSummary) -> Unit)? = null,
+    private val onStepRollover: ((StepRolloverEvent) -> Unit)? = null
 ) {
     private val transformers = ConcurrentHashMap<Int, StepTransformer>()
     private val sensorTypes = ConcurrentHashMap<Int, Int>()
@@ -229,24 +229,20 @@ internal class SensorHookInstaller(
                 elapsedRealtime = SystemClock::elapsedRealtime
             )
         }
-        val raw = values[0]
-        values[0] = transformer.transform(raw, current)
-        val reported = values[0]
+        val result = transformer.transformDetailed(values[0], current)
+        values[0] = result.value
+        val trace = result.trace
+        // A rebased day/reboot/migration is rare and high-value, so it always reaches the log
+        // even when the verbose per-process budget is used up.
+        if (trace.rollovers.isNotEmpty()) {
+            onStepRollover?.invoke(StepRolloverEvent(type, trace))
+        }
         val count = stepEvents.incrementAndGet()
         // Verbose samples for the first few events, then a low-rate summary so diagnostics can
         // keep following a long-running app without flooding the log ring buffer.
         when (sampler.record(SystemClock.elapsedRealtime())) {
-            StepLogSampler.Action.VERBOSE -> onStepSample?.invoke(
-                StepSample(
-                    sensorType = type,
-                    raw = raw,
-                    reported = reported,
-                    settings = current
-                )
-            )
-
-            StepLogSampler.Action.SUMMARY -> onStepSummary?.invoke(StepSummary(type, count, raw, reported))
-
+            StepLogSampler.Action.VERBOSE -> onStepSample?.invoke(StepSample(type, trace))
+            StepLogSampler.Action.SUMMARY -> onStepSummary?.invoke(StepSummary(type, count, trace))
             StepLogSampler.Action.NONE -> Unit
         }
     }
@@ -278,12 +274,15 @@ internal class SensorHookInstaller(
 
 /**
  * One verbose step event as delivered by the target app's sensor queue after rewriting.
- * Field values mirror the log line so diagnostics can parse it back.
+ * The trace carries the raw and reported values plus every intermediate number.
  */
-internal data class StepSample(val sensorType: Int, val raw: Float, val reported: Float, val settings: TargetSettings)
+internal data class StepSample(val sensorType: Int, val trace: StepTrace)
 
 /** Low-rate aggregate emitted after the verbose per-event samples are used up. */
-internal data class StepSummary(val sensorType: Int, val events: Int, val raw: Float, val reported: Float)
+internal data class StepSummary(val sensorType: Int, val events: Int, val trace: StepTrace)
+
+/** Emitted whenever the transformer rebased the day (new day, reboot, reset or migration). */
+internal data class StepRolloverEvent(val sensorType: Int, val trace: StepTrace)
 
 internal fun sensorTypeName(type: Int): String = when (type) {
     android.hardware.Sensor.TYPE_STEP_COUNTER -> "STEP_COUNTER"

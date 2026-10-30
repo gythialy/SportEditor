@@ -131,6 +131,7 @@
     <string name="debug_not_installed">Not installed</string>
     <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
     <string name="debug_sensor_line">Latest sensor: %1$s · raw %2$s → %3$s · %4$s</string>
+    <string name="debug_sensor_calc">calc: %1$s</string>
     <string name="debug_sensor_none">No sensor events yet (app silent or disabled)</string>
     <string name="debug_time_just_now">just now</string>
     <string name="debug_time_seconds_ago">%1$d s ago</string>

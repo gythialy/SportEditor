@@ -38,7 +38,7 @@
   按事件累加处理。
 - 每日基线、当日额度与重启标记通过 `DailyStateStore` 持久化到目标应用的私有
   `sporteditor_daily_state` SharedPreferences，目标进程重启后可以继续当日累计；
-  1.4.0 及更早版本（schema 0/1）的状态会在首次使用时迁移：保留当前上报值、把 raw 基线
+  1.4.1 之前的版本（schema 0/1）的状态会在首次使用时迁移：保留当前上报值、把 raw 基线
   重定到当前读数，避免升级瞬间把整天增量一次性甩给目标应用。
 - 所有应用默认关闭；微信的固定值模式会被 `AppTarget.sanitize()` 回退为默认倍率模式，
   因为微信运动按增量同步，固定值无法产生增量。
@@ -48,12 +48,20 @@
   版本比较由纯 Kotlin 的 `VersionComparator` 完成。
 - 主界面只保留应用配置与设置入口；语言、版本更新、诊断与关于信息集中在设置页。
 - 每个应用卡片在启用后可单独重置为默认值（二次确认），不存在全局重置。
-- 目标进程把传感器事件以结构化 key=value 写入诊断日志：
-  `step sensor=STEP_COUNTER type=19 raw=1307.0 -> reported=1750.0 mode=MULTIPLY value=50 limit=20075`，
-  并在注册监听时记录 `sensor registered type=... handle=...`。每个进程前 20 条逐条记录，
-  之后最多每 60 秒记一条 `step summary` 汇总，避免刷满 500 条日志缓冲。
+- 目标进程把传感器事件以结构化 key=value 写入诊断日志，关键计算过程不再需要 logcat：
+  `step sensor=STEP_COUNTER type=19 raw=2151.0 -> reported=29025.0 day=20756 base=2133.0 delta=18.0 incr=9000.0 limit=20025 day_start=20025.0 auto=0 schema=2 mode=MULTIPLY value=500 rollover=NONE held=false`。
+  字段含义：`base` 当日 raw 基线，`delta` 当日 raw 增量（含重启补偿），`incr` 经每日上限
+  封顶后的当日增量，`limit` 今日生效上限，`day_start` 跨天结转的绝对计数起点，`auto`
+  AUTO 模式本次回调序号，`rollover` 为 `NEW_DAY / REBOOT / COUNTER_RESET / MIGRATION`
+  的组合（无则 `NONE`），`held` 表示本次因回退保护沿用了上一次上报值。
+  跨天/重启/重置/迁移时额外必记一条
+  `step rollover sensor=... day=... reason=... raw=... base=... delta=... day_start=... limit=... schema=...`。
+  每个进程前 20 条逐条记录，之后最多每 60 秒记一条 `step summary` 汇总（带最近一次事件的
+  计算字段），避免刷满 500 条日志缓冲。
 - 诊断页「目标应用」使用目标应用的真实启动器图标（未安装回退字母徽标），展开后显示
-  `最近传感器`：类型、raw → reported 与相对时间，数据来自该包最近一条结构化日志。
+  `最近传感器`：类型、raw → reported、相对时间，以及第二行计算摘要
+  `计算：delta=… incr=… limit=… day_start=… base=… auto=… rollover=… held=…`，
+  数据来自该包最近一条结构化日志。
 - 采集等级在断连期间修改会写入 `local_settings` 的 `pending_capture_level`，
   重连后推送一次并清除，避免被远程旧值覆盖。
 
@@ -100,7 +108,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 ## 测试
 
-- JVM 单元测试：68 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、语言选择、版本比较、设置模型、取值范围、日志筛选。
+- JVM 单元测试：82 个用例，覆盖步数策略、每日上限与抖动、跨天/重启持久化、计算轨迹格式化与日志解析、语言选择、版本比较、设置模型、取值范围、日志筛选。
   ```bash
   ./gradlew :app:testDebugUnitTest
   ```

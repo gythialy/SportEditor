@@ -131,6 +131,7 @@
     <string name="debug_not_installed">未安装</string>
     <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
     <string name="debug_sensor_line">最近传感器：%1$s · raw %2$s → %3$s · %4$s</string>
+    <string name="debug_sensor_calc">计算：%1$s</string>
     <string name="debug_sensor_none">暂无传感器事件（目标应用未上报或未启用）</string>
     <string name="debug_time_just_now">刚刚</string>
     <string name="debug_time_seconds_ago">%1$d 秒前</string>

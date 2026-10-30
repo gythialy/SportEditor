@@ -51,8 +51,8 @@ android {
         applicationId = "io.github.sporteditor"
         minSdk = 26
         targetSdk = 37
-        versionCode = 105
-        versionName = "1.4.0"
+        versionCode = 106
+        versionName = "1.4.1"
     }
 
     signingConfigs {

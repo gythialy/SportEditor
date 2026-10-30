@@ -65,67 +65,173 @@ internal class StepTransformer(
     }
 
     @Synchronized
-    fun transform(raw: Float, settings: TargetSettings): Float {
-        if (!settings.enabled) return raw
+    fun transform(raw: Float, settings: TargetSettings): Float = transformDetailed(raw, settings).value
+
+    /**
+     * [transform] plus the intermediate values that produced the reported counter, for the
+     * diagnostics log. The calculation and the trace are built in one place, so the logged
+     * numbers cannot drift from what the target app actually receives.
+     */
+    @Synchronized
+    fun transformDetailed(raw: Float, settings: TargetSettings): StepResult {
+        if (!settings.enabled) {
+            return StepResult(
+                raw,
+                trace(
+                    reported = raw,
+                    raw = raw,
+                    settings = settings,
+                    rawDelta = 0f,
+                    increment = 0f,
+                    limit = dailyLimit,
+                    rollovers = emptyList(),
+                    held = false
+                )
+            )
+        }
         if (!restored) restore()
 
         val today = clock()
         if (needsMigration) {
             migrate(raw, settings, today)
-            return lastReported
+            return StepResult(
+                lastReported,
+                trace(
+                    reported = lastReported,
+                    raw = raw,
+                    settings = settings,
+                    rawDelta = 0f,
+                    increment = 0f,
+                    limit = dailyLimit,
+                    rollovers = listOf(StepRollover.MIGRATION),
+                    held = false
+                )
+            )
         }
 
         val newDay = day != today
         val rebooted = elapsedRealtime() < lastElapsed
         val counterReset = raw < lastRaw
-        val rolledOver = newDay || counterReset || rebooted
-        if (rolledOver) {
+        val rollovers = buildList {
+            if (newDay) add(StepRollover.NEW_DAY)
+            if (rebooted) add(StepRollover.REBOOT)
+            if (counterReset) add(StepRollover.COUNTER_RESET)
+        }
+        if (rollovers.isNotEmpty()) {
             beginPeriod(today, raw, settings, counterReset = counterReset, rebooted = rebooted)
         }
 
         val limit = DailyLimit.effective(settings.maxSteps, extraSteps(today.toEpochDay()))
         dailyLimit = limit
 
-        if (incremental) return transformIncremental(raw, settings, limit, rolledOver)
+        if (incremental) return transformIncremental(raw, settings, limit, rollovers)
 
         // Only today's raw delta is transformed; lastRaw/baseline keep the day's progress across
         // a reboot without ever re-counting the same steps.
         val rawDelta = (rawDeltaOffset + (raw - baselineRaw)).coerceAtLeast(0f)
-        val reported = when (settings.mode) {
-            StepMode.MULTIPLY -> clampDaily(rawDelta * settings.value, limit)
-            StepMode.ADD -> clampDaily(rawDelta + settings.value, limit)
-            StepMode.REPLACE -> clampDaily(settings.value.toFloat(), limit)
-            StepMode.AUTO -> autoValue(limit, settings)
-        }
+        val autoIndex = if (settings.mode == StepMode.AUTO) autoCount else 0
+        val increment = cappedIncrement(rawIncrement(rawDelta, settings), limit)
+        val settled = settle(dayStartReported + increment, rollovers.isNotEmpty())
 
         lastRaw = raw
         lastElapsed = elapsedRealtime()
-        lastReported = settle(reported, rolledOver)
+        lastReported = settled.value
         persist()
-        return lastReported
+        return StepResult(
+            lastReported,
+            trace(
+                reported = lastReported,
+                raw = raw,
+                settings = settings,
+                rawDelta = rawDelta,
+                increment = increment,
+                limit = limit,
+                rollovers = rollovers,
+                held = settled.held,
+                autoIndex = autoIndex
+            )
+        )
     }
 
     /**
      * `TYPE_STEP_DETECTOR` events are independent steps (value 1.0 each), so they are summed
      * into the day's delta instead of being differenced against a cumulative baseline.
      */
-    private fun transformIncremental(raw: Float, settings: TargetSettings, limit: Int, rolledOver: Boolean): Float {
+    private fun transformIncremental(raw: Float, settings: TargetSettings, limit: Int, rollovers: List<StepRollover>): StepResult {
         // Day rollover, reboot and counter rollback are already handled by beginPeriod(); the
         // detector stream only appends this event to the day's delta.
         val delta = rawDeltaOffset + raw.coerceAtLeast(0f)
         rawDeltaOffset = delta
-        val reported = when (settings.mode) {
-            StepMode.MULTIPLY -> clampDaily(delta * settings.value, limit)
-            StepMode.ADD -> clampDaily(delta + settings.value, limit)
-            StepMode.REPLACE -> clampDaily(settings.value.toFloat(), limit)
-            StepMode.AUTO -> autoValue(limit, settings)
-        }
+        val autoIndex = if (settings.mode == StepMode.AUTO) autoCount else 0
+        val increment = cappedIncrement(rawIncrement(delta, settings), limit)
+        val settled = settle(dayStartReported + increment, rollovers.isNotEmpty())
 
         lastRaw = raw
-        lastReported = settle(reported, rolledOver)
+        lastReported = settled.value
         persist()
-        return lastReported
+        return StepResult(
+            lastReported,
+            trace(
+                reported = lastReported,
+                raw = raw,
+                settings = settings,
+                rawDelta = delta,
+                increment = increment,
+                limit = limit,
+                rollovers = rollovers,
+                held = settled.held,
+                autoIndex = autoIndex,
+                incremental = true
+            )
+        )
     }
+
+    /** Raw increment produced by the current mode, before the day's budget is applied. */
+    private fun rawIncrement(delta: Float, settings: TargetSettings): Float = when (settings.mode) {
+        StepMode.MULTIPLY -> delta * settings.value
+        StepMode.ADD -> delta + settings.value
+        StepMode.REPLACE -> settings.value.toFloat()
+        StepMode.AUTO -> nextAutoIncrement(settings)
+    }
+
+    /** AUTO adds `value` per callback; returns this callback's increment and advances the count. */
+    private fun nextAutoIncrement(settings: TargetSettings): Float {
+        val increment = settings.value.toLong() * autoCount
+        autoCount++
+        return increment.toFloat()
+    }
+
+    /** Caps the day's increment; the absolute counter is never capped. */
+    private fun cappedIncrement(increment: Float, limit: Int): Float = increment.coerceIn(0f, limit.toFloat())
+
+    private fun trace(
+        reported: Float,
+        raw: Float,
+        settings: TargetSettings,
+        rawDelta: Float,
+        increment: Float,
+        limit: Int,
+        rollovers: List<StepRollover>,
+        held: Boolean,
+        autoIndex: Int = 0,
+        incremental: Boolean = this.incremental
+    ): StepTrace = StepTrace(
+        epochDay = day?.toEpochDay() ?: 0L,
+        raw = raw,
+        reported = reported,
+        dayStartReported = dayStartReported,
+        baselineRaw = baselineRaw,
+        rawDelta = rawDelta,
+        increment = increment,
+        limit = limit,
+        autoCount = autoIndex,
+        mode = settings.mode,
+        value = settings.value,
+        schemaVersion = STATE_VERSION,
+        rollovers = rollovers,
+        held = held,
+        incremental = incremental
+    )
 
     private fun restore() {
         if (restored) return
@@ -217,28 +323,18 @@ internal class StepTransformer(
         return if (lastReported + limit > MAX_STEPS) 0f else lastReported
     }
 
-    /** Adds the day's increment to the carried value; only the increment is capped. */
-    private fun clampDaily(increment: Float, limit: Int): Float = dayStartReported + increment.coerceIn(0f, limit.toFloat())
-
-    /**
-     * AUTO adds [TargetSettings.value] per callback; the increment grows with the callback count
-     * and is capped by the day's budget like every other mode.
-     */
-    private fun autoValue(limit: Int, settings: TargetSettings): Float {
-        val increment = settings.value.toLong() * autoCount
-        autoCount++
-        return clampDaily(increment.toFloat(), limit)
-    }
-
     /**
      * Reports the new value unless it would move the counter backwards within the same day.
      * Lowering [TargetSettings.maxSteps] must stop growth, not emit a smaller counter: target
      * apps treat the drop as a sensor reset and freeze the displayed step count.
      */
-    private fun settle(reported: Float, rolledOver: Boolean): Float {
+    private fun settle(reported: Float, rolledOver: Boolean): Settled {
         val next = sanitize(reported)
-        return if (rolledOver || next >= lastReported) next else lastReported
+        val held = !rolledOver && next < lastReported
+        return Settled(if (held) lastReported else next, held)
     }
+
+    private data class Settled(val value: Float, val held: Boolean)
 
     private fun sanitize(value: Float): Float = when {
         value.isNaN() || value.isInfinite() -> 0f
@@ -255,3 +351,46 @@ internal class StepTransformer(
         const val MAX_STEPS = 9_999_999f
     }
 }
+
+/** Why the day's state was rebased for one sensor event. */
+internal enum class StepRollover {
+    /** The local calendar day changed and the absolute counter was carried over. */
+    NEW_DAY,
+
+    /** `elapsedRealtime()` went backwards, i.e. the device rebooted. */
+    REBOOT,
+
+    /** The raw sensor counter moved backwards without a reboot. */
+    COUNTER_RESET,
+
+    /** Persisted state from an older schema was migrated in this event. */
+    MIGRATION
+}
+
+/**
+ * The intermediate values of one [StepTransformer.transformDetailed] call.
+ *
+ * [rawDelta] is the raw delta since [baselineRaw] (including reboot compensation), [increment] is
+ * that delta transformed by the mode and capped by [limit], and [reported] is
+ * `dayStartReported + increment` after the backwards-jump guard ([held]).
+ */
+internal data class StepTrace(
+    val epochDay: Long,
+    val raw: Float,
+    val reported: Float,
+    val dayStartReported: Float,
+    val baselineRaw: Float,
+    val rawDelta: Float,
+    val increment: Float,
+    val limit: Int,
+    val autoCount: Int,
+    val mode: StepMode,
+    val value: Int,
+    val schemaVersion: Int,
+    val rollovers: List<StepRollover>,
+    val held: Boolean,
+    val incremental: Boolean
+)
+
+/** Reported counter plus its calculation trace. */
+internal data class StepResult(val value: Float, val trace: StepTrace)
