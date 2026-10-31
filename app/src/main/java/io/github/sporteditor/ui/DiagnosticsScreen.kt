@@ -35,7 +35,6 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -93,7 +92,6 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -111,12 +109,16 @@ import io.github.sporteditor.debug.DebugLogStore
 import io.github.sporteditor.debug.DebugLogType
 import io.github.sporteditor.debug.SensorEventLog
 import io.github.sporteditor.ui.art.EmptyLogArt
+import io.github.sporteditor.ui.theme.AppShapes
 import io.github.sporteditor.ui.theme.Dimensions
 import io.github.sporteditor.ui.theme.Motion
+import io.github.sporteditor.ui.theme.ReadingMono
+import io.github.sporteditor.ui.theme.ReadingMonoLabel
 import io.github.sporteditor.ui.theme.animationsEnabled
 import io.github.sporteditor.ui.theme.cardContainerColor
 import io.github.sporteditor.ui.theme.contentInset
 import io.github.sporteditor.ui.theme.windowWidthDp
+import io.github.sporteditor.ui.theme.withTabularNumerals
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -291,7 +293,7 @@ private fun DiagnosticsTopBar(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(AppShapes.pill)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
@@ -423,7 +425,7 @@ private fun DiagnosticsTabBar(pagerState: PagerState) {
                     .fillMaxWidth()
                     .height(3.dp)
                     .padding(horizontal = 42.dp)
-                    .clip(RoundedCornerShape(2.dp))
+                    .clip(AppShapes.tabIndicator)
                     .background(MaterialTheme.colorScheme.primary)
             )
         }
@@ -490,7 +492,7 @@ private fun LogsPage(
                 } else {
                     stringResource(R.string.debug_log_count, allEntries.size)
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.withTabularNumerals(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -557,7 +559,7 @@ private fun LogsPage(
 @Composable
 private fun TypeChip(label: String, count: Int, selected: Boolean, modifier: Modifier = Modifier, onSelected: () -> Unit) {
     Surface(
-        shape = RoundedCornerShape(50),
+        shape = AppShapes.pill,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             width = 1.dp,
@@ -567,7 +569,7 @@ private fun TypeChip(label: String, count: Int, selected: Boolean, modifier: Mod
     ) {
         Text(
             text = "$label $count",
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelMedium.withTabularNumerals(),
             color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -581,7 +583,7 @@ private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier
     var expanded by rememberSaveable(entry.time, entry.source, entry.message) { mutableStateOf(false) }
 
     Card(
-        shape = RoundedCornerShape(14.dp),
+        shape = AppShapes.logRow,
         colors = CardDefaults.cardColors(containerColor = cardContainerColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
@@ -599,8 +601,7 @@ private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier
             ) {
                 Text(
                     text = timeFormat.format(Date(entry.time)),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontFamily = FontFamily.Monospace,
+                    style = ReadingMonoLabel,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 LevelBadge(level = entry.level)
@@ -614,7 +615,7 @@ private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier
             }
             Text(
                 text = entry.message,
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                style = ReadingMono,
                 color = if (entry.level == DebugLogLevel.ERROR) {
                     MaterialTheme.colorScheme.error
                 } else {
@@ -639,7 +640,7 @@ private fun LevelBadge(level: DebugLogLevel) {
         DebugLogLevel.WARN -> MaterialTheme.colorScheme.onTertiaryContainer
         DebugLogLevel.INFO -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Surface(color = container, contentColor = content, shape = RoundedCornerShape(7.dp)) {
+    Surface(color = container, contentColor = content, shape = AppShapes.levelTag) {
         Text(
             text = stringResource(levelLabel(level)),
             style = MaterialTheme.typography.labelSmall,
@@ -688,7 +689,7 @@ private fun EnvironmentPage(state: SettingsState, entriesSize: Int) {
         item {
             // 主卡：框架连接状态是本页唯一焦点。
             Card(
-                shape = RoundedCornerShape(16.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = CardDefaults.cardColors(containerColor = cardContainerColor()),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                 modifier = Modifier.fillMaxWidth()
@@ -734,7 +735,7 @@ private fun EnvironmentPage(state: SettingsState, entriesSize: Int) {
                         Text(
                             text = (state.frameworkName ?: "—") + " " + (state.frameworkVersion ?: "") +
                                 " · API " + (state.apiVersion ?: 0),
-                            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                            style = ReadingMono,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -818,7 +819,7 @@ private fun InfoTitle(text: String) {
 @Composable
 private fun InfoCard(content: @Composable () -> Unit) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = cardContainerColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
@@ -843,7 +844,7 @@ private fun InfoRow(label: String, value: String) {
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            style = ReadingMono,
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.End
         )
@@ -864,7 +865,7 @@ private fun InfoDivider() {
 @Composable
 private fun TipsCard() {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = cardContainerColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier.fillMaxWidth()
@@ -875,7 +876,7 @@ private fun TipsCard() {
         ) {
             Text(
                 text = stringResource(R.string.debug_tip_logcat),
-                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                style = ReadingMono
             )
             Text(
                 text = stringResource(R.string.debug_tip_framework),
@@ -1005,7 +1006,7 @@ private fun AppRow(snapshot: TargetSnapshot, detail: Boolean, lastSensor: DebugL
     val iconState = rememberAppIcon(target)
 
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = cardContainerColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
@@ -1084,14 +1085,14 @@ private fun AppRow(snapshot: TargetSnapshot, detail: Boolean, lastSensor: DebugL
                     modifier = Modifier
                         .padding(top = 10.dp)
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
                         text = target.packageName,
-                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                        style = ReadingMonoLabel,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
@@ -1102,7 +1103,7 @@ private fun AppRow(snapshot: TargetSnapshot, detail: Boolean, lastSensor: DebugL
                             settings.value,
                             settings.maxSteps
                         ),
-                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                        style = ReadingMonoLabel,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val sensorEvent = lastSensor?.let { SensorEventLog.parse(it.message) }
@@ -1118,14 +1119,14 @@ private fun AppRow(snapshot: TargetSnapshot, detail: Boolean, lastSensor: DebugL
                         } else {
                             stringResource(R.string.debug_sensor_none)
                         },
-                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                        style = ReadingMonoLabel,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val calculation = sensorEvent?.let(SensorEventLog::describeCalculation)
                     if (calculation != null) {
                         Text(
                             text = stringResource(R.string.debug_sensor_calc, calculation),
-                            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                            style = ReadingMonoLabel,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

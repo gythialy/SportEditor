@@ -121,6 +121,7 @@ fun SportEditorTheme(themeMode: ThemeMode = ThemeMode.SYSTEM, dynamicColor: Bool
     MaterialTheme(
         colorScheme = colorScheme,
         typography = SportEditorTypography,
+        shapes = SportEditorShapes,
         content = content
     )
 }

@@ -1,12 +1,5 @@
 package io.github.sporteditor.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
@@ -33,7 +27,6 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -60,6 +53,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.sporteditor.BuildConfig
@@ -138,17 +133,19 @@ fun SettingsScreen(
                         onClick = { showThemeDialog = true }
                     )
                     RowDivider()
-                    UpdateRow(
-                        updateState = updateState,
-                        onCheckUpdate = onCheckUpdate,
-                        onOpenRelease = onOpenRelease
-                    )
-                    RowDivider()
+                    // Diagnostics sits above the update row: it is the everyday troubleshooting
+                    // entry, while "check for updates" is a rarely used network action.
                     SettingsRow(
                         icon = Icons.Filled.BugReport,
                         title = stringResource(R.string.debug_title),
                         subtitle = stringResource(R.string.debug_desc),
                         onClick = onOpenDiagnostics
+                    )
+                    RowDivider()
+                    UpdateRow(
+                        updateState = updateState,
+                        onCheckUpdate = onCheckUpdate,
+                        onOpenRelease = onOpenRelease
                     )
                 }
             }
@@ -243,7 +240,7 @@ private fun SectionLabel(labelRes: Int, modifier: Modifier = Modifier) {
 private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor()
         ),
@@ -292,7 +289,7 @@ private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onCl
     )
 }
 
-/** Mutually exclusive update states; drives the [AnimatedContent] key below the check button. */
+/** Mutually exclusive update states; drives the marker and the trailing action of [UpdateRow]. */
 private enum class UpdateStatus { Idle, Checking, UpToDate, Available, Error }
 
 private fun UpdateUiState.status(): UpdateStatus = when {
@@ -303,133 +300,111 @@ private fun UpdateUiState.status(): UpdateStatus = when {
     else -> UpdateStatus.Idle
 }
 
-@Composable
-private fun UpdateStatusLine(icon: ImageVector, tint: Color, text: String) {
-    Row(
-        modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = tint
-        )
-    }
-}
-
+/**
+ * One row, one line: title, current version, result marker, and the action on the right where the
+ * other rows put their chevron. There is no supporting line and nothing is appended below, so the
+ * version text can never be squeezed by the action and checking never pushes the card under it.
+ */
 @Composable
 private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onOpenRelease: (String) -> Unit) {
-    Column {
-        ListItem(
-            leadingContent = {
-                Icon(
-                    imageVector = Icons.Filled.SystemUpdate,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            headlineContent = { Text(stringResource(R.string.update_title)) },
-            supportingContent = {
-                // The action lives on its own line below: a trailing button takes about half the row
-                // width in English, which used to squeeze this line into three.
+    val status = updateState.status()
+    val update = updateState.update
+    val checkingLabel = stringResource(R.string.update_checking)
+
+    ListItem(
+        leadingContent = {
+            Icon(
+                imageVector = Icons.Filled.SystemUpdate,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        headlineContent = { Text(stringResource(R.string.update_title)) },
+        supportingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Text(
                     text = stringResource(R.string.update_current, BuildConfig.VERSION_NAME),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-        )
+                when (status) {
+                    UpdateStatus.UpToDate -> Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = stringResource(R.string.update_up_to_date),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
 
-        TextButton(
-            onClick = onCheckUpdate,
-            enabled = !updateState.checking,
-            contentPadding = PaddingValues(horizontal = 8.dp),
-            // 48 dp, not 56: the button's own 8 dp content padding puts the icon on the same
-            // left edge as the row title above (56 dp), which is where the status lines that
-            // replace this action also start.
-            modifier = Modifier
-                .padding(start = 48.dp)
-                .padding(bottom = 4.dp)
-        ) {
-            if (updateState.checking) {
-                UpdateSpinner(modifier = Modifier.size(18.dp))
-            } else {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Spacer(Modifier.width(4.dp))
-            Text(
-                stringResource(
-                    if (updateState.checking) R.string.update_checking else R.string.update_check
-                )
-            )
-        }
-
-        // The result used to be a bare Text sibling of the row: every state change inserted or
-        // removed a line and pushed the card below up and down. Cross-fading between the states
-        // keeps the transition readable and the surrounding layout still.
-        AnimatedContent(
-            targetState = updateState.status(),
-            transitionSpec = {
-                (fadeIn(animationSpec = tween(durationMillis = 180)) + expandVertically(expandFrom = Alignment.Top)) togetherWith
-                    (fadeOut(animationSpec = tween(durationMillis = 120)) + shrinkVertically(shrinkTowards = Alignment.Top))
-            },
-            label = "update-status"
-        ) { status ->
-            when (status) {
-                UpdateStatus.Idle, UpdateStatus.Checking -> Spacer(Modifier)
-
-                UpdateStatus.Available -> {
-                    val update = updateState.update
-                    if (update != null) {
-                        Column(
-                            modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
-                        ) {
+                    UpdateStatus.Available -> {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowCircleUp,
+                            contentDescription = stringResource(
+                                R.string.update_available,
+                                update?.version.orEmpty()
+                            ),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        if (update != null) {
                             Text(
-                                text = stringResource(R.string.update_available, update.version),
-                                style = MaterialTheme.typography.bodyMedium
+                                text = update.version,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
-                            TextButton(
-                                onClick = { onOpenRelease(update.htmlUrl) },
-                                contentPadding = PaddingValues(horizontal = 8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(stringResource(R.string.update_open))
-                            }
                         }
+                    }
+
+                    UpdateStatus.Error -> Icon(
+                        imageVector = Icons.Filled.Error,
+                        contentDescription = stringResource(
+                            R.string.update_error,
+                            updateState.error.orEmpty()
+                        ),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(14.dp)
+                    )
+
+                    UpdateStatus.Idle, UpdateStatus.Checking -> Unit
+                }
+            }
+        },
+        trailingContent = {
+            when (status) {
+                UpdateStatus.Checking -> UpdateSpinner(
+                    modifier = Modifier
+                        .size(18.dp)
+                        .semantics { contentDescription = checkingLabel }
+                )
+
+                UpdateStatus.Available -> if (update != null) {
+                    TextButton(
+                        onClick = { onOpenRelease(update.htmlUrl) },
+                        contentPadding = PaddingValues(horizontal = 8.dp)
+                    ) {
+                        Text(stringResource(R.string.update_action_open))
                     }
                 }
 
-                UpdateStatus.UpToDate -> UpdateStatusLine(
-                    icon = Icons.Filled.CheckCircle,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    text = stringResource(R.string.update_up_to_date)
-                )
+                UpdateStatus.Error -> TextButton(
+                    onClick = onCheckUpdate,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Text(stringResource(R.string.update_action_retry))
+                }
 
-                UpdateStatus.Error -> UpdateStatusLine(
-                    icon = Icons.Filled.Error,
-                    tint = MaterialTheme.colorScheme.error,
-                    text = stringResource(R.string.update_error, updateState.error.orEmpty())
-                )
+                UpdateStatus.Idle, UpdateStatus.UpToDate -> TextButton(
+                    onClick = onCheckUpdate,
+                    contentPadding = PaddingValues(horizontal = 8.dp)
+                ) {
+                    Text(stringResource(R.string.update_action_check))
+                }
             }
-        }
-    }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+    )
 }
 
 @Composable

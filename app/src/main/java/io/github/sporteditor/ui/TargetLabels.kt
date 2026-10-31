@@ -29,12 +29,14 @@ fun StepMode.labelRes(): Int = when (this) {
     StepMode.REPLACE -> R.string.mode_replace
 }
 
-@StringRes
-fun StepMode.descRes(): Int = when (this) {
-    StepMode.MULTIPLY -> R.string.mode_multiply_desc
-    StepMode.ADD -> R.string.mode_add_desc
-    StepMode.AUTO -> R.string.mode_auto_desc
-    StepMode.REPLACE -> R.string.mode_replace_desc
+/**
+ * The strategy that fits the app's sync model best: WeRun scales increments (multiply), Alipay
+ * needs a steady per-callback increment (auto), and QQ/Weibo are happiest with a plain offset.
+ */
+fun AppTarget.recommendedMode(): StepMode = when (this) {
+    AppTarget.WECHAT -> StepMode.MULTIPLY
+    AppTarget.ALIPAY -> StepMode.AUTO
+    AppTarget.QQ, AppTarget.WEIBO -> StepMode.ADD
 }
 
 /** Compact label used by the segmented control, where four full labels do not fit. */
