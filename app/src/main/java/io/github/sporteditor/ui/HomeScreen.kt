@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,7 +34,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -118,6 +118,7 @@ import io.github.sporteditor.ui.theme.animationsEnabled
 import io.github.sporteditor.ui.theme.cardContainerColor
 import io.github.sporteditor.ui.theme.contentInset
 import io.github.sporteditor.ui.theme.windowWidthDp
+import io.github.sporteditor.ui.theme.withTabularNumerals
 import java.text.NumberFormat
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
@@ -175,7 +176,7 @@ fun HomeScreen(
                                 AppTarget.entries.size,
                                 enabledCount
                             ),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelMedium.withTabularNumerals(),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -337,7 +338,7 @@ private fun DisconnectedCard(onViewSteps: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onViewSteps),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = alertWash(),
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -457,7 +458,7 @@ private fun AppCard(
             .semantics {
                 stateDescription = if (expanded) expandedState else collapsedState
             },
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor(),
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -578,6 +579,7 @@ private fun AppCard(
                         }
                     }
                     StepEditor(
+                        target = target,
                         settings = settings,
                         effectiveLimit = effectiveLimit,
                         readoutValue = readoutValue,
@@ -644,9 +646,18 @@ private fun ModeSelector(
     onModeChange: (StepMode) -> Unit,
     trailing: @Composable RowScope.() -> Unit = {}
 ) {
-    var showHelp by remember { mutableStateOf(false) }
-    val helpDescriptions = StepMode.entries.map { item ->
-        stringResource(item.labelRes()) + "：" + stringResource(item.descRes())
+    // WeRun syncs increments, so a constant fixed value can never work there: the option is not
+    // offered at all instead of being shown disabled.
+    val modes = StepMode.entries.filter { !(target == AppTarget.WECHAT && it == StepMode.REPLACE) }
+    // Four segments cannot hold the long labels at 360 dp (they get ellipsized), so the short set
+    // takes over; with three segments the full words fit and read better.
+    val abbrev = modes.size > 3
+
+    // A stored REPLACE from an older version would leave no selected option; snap it back.
+    LaunchedEffect(target, mode) {
+        if (target == AppTarget.WECHAT && mode == StepMode.REPLACE) {
+            onModeChange(StepMode.MULTIPLY)
+        }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -660,67 +671,51 @@ private fun ModeSelector(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.weight(1f))
-            TextButton(
-                onClick = { showHelp = true },
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.mode_help),
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
             trailing()
         }
 
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            StepMode.entries.forEachIndexed { index, item ->
-                // WeRun syncs increments; a constant fixed value cannot work there.
-                val enabled = !(target == AppTarget.WECHAT && item == StepMode.REPLACE)
+            modes.forEachIndexed { index, item ->
                 SegmentedButton(
                     selected = item == mode,
                     onClick = { onModeChange(item) },
-                    shape = SegmentedButtonDefaults.itemShape(index, StepMode.entries.size),
-                    enabled = enabled,
+                    shape = SegmentedButtonDefaults.itemShape(index, modes.size),
                     label = {
-                        Text(
-                            text = stringResource(item.shortLabelRes()),
-                            maxLines = 1,
-                            // At 320 dp English still cannot fit all four labels; an ellipsis
-                            // admits that instead of cutting a glyph in half at the divider.
-                            overflow = TextOverflow.Ellipsis
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = stringResource(
+                                    if (abbrev) item.shortLabelRes() else item.labelRes()
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            // The star marks the strategy recommended for this app; it stays on
+                            // that option regardless of what is currently selected.
+                            if (item == target.recommendedMode()) {
+                                Text(
+                                    text = stringResource(R.string.mode_recommended),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier
+                                        .padding(start = 2.dp)
+                                        .offset(y = (-6).dp)
+                                )
+                            }
+                        }
                     },
-                    // No check glyph: it reserved enough width that "Multiplier" was clipped in
-                    // English at 411 dp, and the filled container plus the shared border already
-                    // say which of the four is active.
+                    // No check glyph: it reserved enough width that "Multiply" was clipped in
+                    // English, and the filled container plus the shared border already say which
+                    // option is active.
                     icon = {}
                 )
             }
         }
-
-        Text(
-            text = stringResource(mode.descRes()),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-
-    if (showHelp) {
-        AlertDialog(
-            onDismissRequest = { showHelp = false },
-            title = { Text(stringResource(R.string.mode_help_title)) },
-            text = { Text(helpDescriptions.joinToString("\n\n")) },
-            confirmButton = {
-                TextButton(onClick = { showHelp = false }) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            }
-        )
     }
 }
 
 @Composable
 private fun StepEditor(
+    target: AppTarget,
     settings: TargetSettings,
     effectiveLimit: Int,
     readoutValue: Int,
@@ -1202,14 +1197,14 @@ private fun previewText(mode: StepMode, value: Int, effectiveLimit: Int): String
         return stringResource(R.string.preview_auto, formatNumber(value))
     }
 
-    // Show what the strategy itself produces; the effective daily limit is displayed once, in the
-    // daily-max section, so capping is only flagged here instead of repeating the number.
+    // Plain arithmetic, no "capped" suffix: the daily-max section directly below owns the cap, and
+    // a suffix here only repeated it. The clamp stays for REPLACE, where the value is absolute.
     val result = when (mode) {
         StepMode.MULTIPLY -> sampleSteps.toLong() * value
         StepMode.ADD -> sampleSteps.toLong() + value
-        StepMode.REPLACE, StepMode.AUTO -> value.toLong()
+        StepMode.REPLACE, StepMode.AUTO -> value.toLong().coerceAtMost(effectiveLimit.toLong())
     }
-    val text = when (mode) {
+    return when (mode) {
         StepMode.MULTIPLY, StepMode.ADD -> stringResource(
             R.string.preview_target,
             formatNumber(sampleSteps),
@@ -1217,11 +1212,6 @@ private fun previewText(mode: StepMode, value: Int, effectiveLimit: Int): String
         )
 
         StepMode.REPLACE, StepMode.AUTO -> stringResource(R.string.preview_replace, formatNumber(result))
-    }
-    return if (result > effectiveLimit) {
-        text + " · " + stringResource(R.string.preview_capped)
-    } else {
-        text
     }
 }
 

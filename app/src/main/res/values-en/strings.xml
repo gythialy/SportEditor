@@ -10,18 +10,18 @@
     <string name="status_connected">LSPosed service connected</string>
     <string name="status_disconnected">LSPosed service not connected</string>
     <string name="status_connected_detail">Framework: %1$s %2$s · API %3$d</string>
-    <string name="status_disconnected_hint">Enable this module in LSPosed, select the target apps as scope, then restart this app.</string>
-    <string name="status_disconnected_hint_short">Enable it in LSPosed, then restart this app</string>
+    <string name="status_disconnected_hint">Enable the module in LSPosed, scope the target apps, then restart this app.</string>
+    <string name="status_disconnected_hint_short">Enable in LSPosed, then restart</string>
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>
-    <string name="status_not_synced">Settings are stored on this device only. Connect the LSPosed service to sync them to the hooked apps.</string>
+    <string name="status_not_synced">Settings stay on this device until the service connects.</string>
     <string name="status_sheet_title">Connection</string>
     <string name="action_view_steps">View steps</string>
 
     <string name="action_more">More</string>
     <string name="action_reset">Reset</string>
-    <string name="action_reset_default">Reset to defaults</string>
-    <string name="action_reset_confirm">Reset %1$s to its defaults?</string>
+    <string name="action_reset_default">Reset</string>
+    <string name="action_reset_confirm">Reset %1$s to defaults?</string>
     <string name="action_reset_confirm_action">Reset</string>
     <string name="action_reset_target_done">%1$s reset</string>
     <string name="action_cancel">Cancel</string>
@@ -36,8 +36,8 @@
     <string name="action_back">Back</string>
     <string name="section_general">General</string>
     <string name="about_title">About</string>
-    <string name="about_homepage">Project homepage</string>
-    <string name="about_license">Open-source license</string>
+    <string name="about_homepage">Homepage</string>
+    <string name="about_license">License</string>
     <string name="settings_version">Version</string>
 
     <string name="theme_title">Theme</string>
@@ -54,15 +54,14 @@
     <string name="mode_auto">Auto</string>
     <string name="mode_replace">Fixed</string>
 
-    <string name="mode_short_multiply">×</string>
-    <string name="mode_short_add">+</string>
+    <string name="mode_short_multiply">Multi</string>
+    <string name="mode_short_add">Add</string>
     <string name="mode_short_auto">Auto</string>
     <string name="mode_short_replace">Fixed</string>
 
     <string name="preview_target">At %1$s real steps → %2$s steps</string>
-    <string name="preview_auto">Adds %1$s per callback, capped by the daily max</string>
+    <string name="preview_auto">Adds %1$s per callback, capped daily</string>
     <string name="preview_replace">Always reports %1$s steps</string>
-    <string name="preview_capped">capped</string>
 
     <string name="preset_multiply">×%1$s</string>
     <string name="preset_value">%1$s</string>
@@ -82,12 +81,12 @@
     <string name="toggle_app">Enable or disable %1$s</string>
     <string name="invalid_value">Allowed range: %1$d – %2$d</string>
 
-    <string name="footer_disclaimer">For learning and testing only. Use at your own risk.</string>
+    <string name="footer_disclaimer">For testing only. Use at your own risk.</string>
     <string name="footer_version">Version %1$s</string>
 
     <!-- Diagnostics -->
     <string name="debug_title">Diagnostics</string>
-    <string name="debug_desc">Environment, config and hook logs</string>
+    <string name="debug_desc">Env, config and hook logs</string>
     <string name="debug_more_actions">More actions</string>
     <string name="debug_environment">Environment</string>
     <string name="debug_targets">Target apps</string>
@@ -104,18 +103,18 @@
     <string name="debug_disabled">Off</string>
     <string name="debug_filter_uninstalled">Not installed</string>
     <string name="debug_apps_summary">Enabled %1$d/%2$d · Installed %3$d</string>
-    <string name="debug_search_matches">%1$d matched of %2$d</string>
+    <string name="debug_search_matches">%1$d of %2$d</string>
     <string name="debug_stats">Stats</string>
-    <string name="debug_env_connected_desc">Framework connected; settings and logs sync in real time.</string>
-    <string name="debug_env_disconnected_desc">Framework not connected; settings are cached locally until reconnect.</string>
+    <string name="debug_env_connected_desc">Connected; settings and logs sync in real time.</string>
+    <string name="debug_env_disconnected_desc">Not connected; settings cached locally.</string>
     <string name="debug_search_acd">Search logs</string>
     <string name="debug_capture_level_acd">Log capture level</string>
     <string name="debug_clear_search">Clear query</string>
     <string name="debug_copy">Copy</string>
     <string name="debug_share">Share</string>
     <string name="debug_clear">Clear</string>
-    <string name="debug_copied">Diagnostics copied</string>
-    <string name="debug_cleared">Logs cleared</string>
+    <string name="debug_copied">Copied</string>
+    <string name="debug_cleared">Cleared</string>
     <string name="debug_empty">No logs yet. Restart a target app or change a setting.</string>
     <string name="debug_empty_filtered">No logs match the current filter.</string>
     <string name="debug_tip_logcat">Full hook log: adb logcat -s SportEditor</string>
@@ -132,21 +131,16 @@
     <string name="debug_target_state">enabled=%1$s · mode=%2$s · value=%3$d · max=%4$d</string>
     <string name="debug_sensor_line">Latest sensor: %1$s · raw %2$s → %3$s · %4$s</string>
     <string name="debug_sensor_calc">calc: %1$s</string>
-    <string name="debug_sensor_none">No sensor events yet (app silent or disabled)</string>
+    <string name="debug_sensor_none">No sensor events yet.</string>
     <string name="debug_time_just_now">just now</string>
     <string name="debug_time_seconds_ago">%1$d s ago</string>
     <string name="debug_time_minutes_ago">%1$d min ago</string>
     <string name="debug_time_hours_ago">%1$d h ago</string>
 
-    <string name="mode_help">Help</string>
-    <string name="mode_help_title">Strategy help</string>
-    <string name="mode_multiply_desc">Real steps × multiplier. Increments scale proportionally; recommended for WeRun.</string>
-    <string name="mode_add_desc">Real steps + a fixed offset. Keeps real increments and raises the total.</string>
-    <string name="mode_auto_desc">Adds the configured value per sensor callback until the daily max is reached, then stops for the rest of the day. Best for Alipay.</string>
-    <string name="mode_replace_desc">Always reports the fixed value. WeRun syncs increments, so fixed values often have no effect; prefer Multiply or Add.</string>
+    <string name="mode_recommended">★</string>
     <string name="label_max_steps">Daily max</string>
     <string name="label_max_steps_base">Base max</string>
-    <string name="max_steps_effective_hint">Effective today = base + a daily random 0–100</string>
+    <string name="max_steps_effective_hint">Today = base + random 0–100</string>
     <string name="max_steps_base_value">Base %1$s</string>
     <string name="max_steps_today_offset">Today +%1$d</string>
 
@@ -157,11 +151,12 @@
 
     <!-- Updates -->
     <string name="update_title">Updates</string>
-    <string name="update_current">Current version %1$s</string>
-    <string name="update_check">Check for updates</string>
     <string name="update_checking">Checking…</string>
+    <string name="update_current">Current version %1$s</string>
+    <string name="update_action_check">Check</string>
+    <string name="update_action_open">Update</string>
+    <string name="update_action_retry">Retry</string>
     <string name="update_up_to_date">You are up to date</string>
     <string name="update_available">Version %1$s is available</string>
-    <string name="update_open">Open release page</string>
     <string name="update_error">Check failed (%1$s) · Try again later</string>
 </resources>
