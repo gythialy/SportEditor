@@ -24,7 +24,7 @@ buildscript {
         "org.apache.httpcomponents:httpclient:4.5.14",
         // Dependabot GHSA-xxph-c9ww-hj94 / CVE-2026-102554: CompactHashMap deserialization can
         // allocate unbounded memory. Reached through AGP's com.android.tools:common 32.4.1.
-        "com.google.guava:guava:33.7.2-jre"
+        "com.google.guava:guava:33.8.0-jre"
     )
     configurations.all {
         resolutionStrategy.force(pinnedVersions)
@@ -42,7 +42,7 @@ allprojects {
         "org.apache.httpcomponents:httpclient:4.5.14",
         // Dependabot GHSA-xxph-c9ww-hj94 / CVE-2026-102554: CompactHashMap deserialization can
         // allocate unbounded memory. Reached through AGP's com.android.tools:common 32.4.1.
-        "com.google.guava:guava:33.7.2-jre"
+        "com.google.guava:guava:33.8.0-jre"
     )
     configurations.all {
         resolutionStrategy.force(pinnedVersions)
