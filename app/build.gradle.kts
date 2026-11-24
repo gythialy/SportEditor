@@ -42,13 +42,13 @@ if (buildingRelease && System.getenv("REQUIRE_RELEASE_SIGNING") == "true" && !ha
 }
 
 android {
-    namespace = "io.github.sporteditor"
+    namespace = "io.github.gythialy.sporteditor"
     compileSdk = 37
     compileSdkMinor = 1
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "io.github.sporteditor"
+        applicationId = "io.github.gythialy.sporteditor"
         minSdk = 26
         targetSdk = 37
         // v1.0 restarts the public version line; the code stays monotonic so installs update
