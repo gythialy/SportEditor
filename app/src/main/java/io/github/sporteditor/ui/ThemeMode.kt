@@ -35,3 +35,22 @@ object ThemeModeStore {
 
     private fun preferences(context: Context) = context.getSharedPreferences(AppLanguageStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
 }
+
+/**
+ * Persists whether the Android 12+ dynamic ("Monet") palette is used.
+ *
+ * Defaults to on, which is the behaviour the app had before the toggle existed. The value is
+ * meaningless below API 31: there is no system palette to consume, so the theme falls back to the
+ * brand scheme regardless.
+ */
+object DynamicColorStore {
+    private const val KEY_DYNAMIC_COLOR = "dynamic_color"
+
+    fun load(context: Context): Boolean = preferences(context).getBoolean(KEY_DYNAMIC_COLOR, true)
+
+    fun save(context: Context, enabled: Boolean) {
+        preferences(context).edit().putBoolean(KEY_DYNAMIC_COLOR, enabled).apply()
+    }
+
+    private fun preferences(context: Context) = context.getSharedPreferences(AppLanguageStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
+}

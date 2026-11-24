@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -47,17 +48,19 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +72,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -152,12 +156,29 @@ fun DiagnosticsScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var levelMenuOpen by remember { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
 
     val filtered = DebugLogFilter.apply(entries, selectedTypes, query)
     val sideInset = contentInset(windowWidthDp())
     val copiedMessage = stringResource(R.string.debug_copied)
     val clearedMessage = stringResource(R.string.debug_cleared)
+
+    // Hoisted out of the top bar: the floating toolbar hosts the same three report actions, so both
+    // hosts need one definition rather than two copies of the intent/ clipboard plumbing.
+    val copyReport: () -> Unit = {
+        clipboard.setText(AnnotatedString(buildReport(state, filtered)))
+        scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
+    }
+    val shareReport: () -> Unit = {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, buildReport(state, filtered))
+        }
+        context.startActivity(Intent.createChooser(send, null))
+    }
+    val clearReport: () -> Unit = {
+        store.clear()
+        scope.launch { snackbarHostState.showSnackbar(clearedMessage) }
+    }
 
     BackHandler(onBack = onBack)
 
@@ -177,26 +198,6 @@ fun DiagnosticsScreen(
                 onCaptureLevelChange = onCaptureLevelChange,
                 levelMenuOpen = levelMenuOpen,
                 onLevelMenuOpenChange = { levelMenuOpen = it },
-                menuOpen = menuOpen,
-                onMenuOpenChange = { menuOpen = it },
-                onCopy = {
-                    menuOpen = false
-                    clipboard.setText(AnnotatedString(buildReport(state, filtered)))
-                    scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
-                },
-                onShare = {
-                    menuOpen = false
-                    val send = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, buildReport(state, filtered))
-                    }
-                    context.startActivity(Intent.createChooser(send, null))
-                },
-                onClear = {
-                    menuOpen = false
-                    store.clear()
-                    scope.launch { snackbarHostState.showSnackbar(clearedMessage) }
-                },
                 onCloseSearch = {
                     query = ""
                     searchOpen = false
@@ -209,35 +210,71 @@ fun DiagnosticsScreen(
         // The three views are one page-level switch, not navigation: the tab row sits directly
         // under the app bar where a page switch belongs, instead of eating the bottom 72 dp that
         // the log list needs.
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 // Readable measure on tablets; the tab row is centred with the content.
                 .padding(horizontal = sideInset)
         ) {
-            DiagnosticsTabBar(pagerState)
+            Column(modifier = Modifier.fillMaxSize()) {
+                DiagnosticsTabBar(pagerState)
 
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) { page ->
-                when (DiagnosticsTab.entries[page]) {
-                    DiagnosticsTab.LOGS -> LogsPage(
-                        filtered = filtered,
-                        allEntries = entries,
-                        selected = selectedTypes,
-                        query = query,
-                        timeFormat = timeFormat,
-                        onSelectedChange = { types -> selectedRaw = types.joinToString(",") { it.name } }
-                    )
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) { page ->
+                    when (DiagnosticsTab.entries[page]) {
+                        DiagnosticsTab.LOGS -> LogsPage(
+                            filtered = filtered,
+                            allEntries = entries,
+                            selected = selectedTypes,
+                            query = query,
+                            timeFormat = timeFormat,
+                            onSelectedChange = { types -> selectedRaw = types.joinToString(",") { it.name } }
+                        )
 
-                    DiagnosticsTab.ENVIRONMENT -> EnvironmentPage(state = state, entriesSize = entries.size)
+                        DiagnosticsTab.ENVIRONMENT -> EnvironmentPage(state = state, entriesSize = entries.size)
 
-                    DiagnosticsTab.APPS -> AppsPage(state = state, entries = entries)
+                        DiagnosticsTab.APPS -> AppsPage(state = state, entries = entries)
+                    }
                 }
+            }
+
+            // The three report actions used to hide behind an overflow menu in the app bar. They
+            // are the only actions on this screen and they act on the whole report, so they float
+            // over the bottom of the log list instead: always visible, one tap each, and the app
+            // bar keeps only navigation and the level picker.
+            if (diagnosticsTab(pagerState) == DiagnosticsTab.LOGS) {
+                HorizontalFloatingToolbar(
+                    expanded = true,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp),
+                    colors = FloatingToolbarDefaults.standardFloatingToolbarColors(),
+                    content = {
+                        IconButton(onClick = copyReport) {
+                            Icon(
+                                imageVector = Icons.Filled.ContentCopy,
+                                contentDescription = stringResource(R.string.debug_copy)
+                            )
+                        }
+                        IconButton(onClick = shareReport) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = stringResource(R.string.debug_share)
+                            )
+                        }
+                        IconButton(onClick = clearReport) {
+                            Icon(
+                                imageVector = Icons.Filled.DeleteSweep,
+                                contentDescription = stringResource(R.string.debug_clear)
+                            )
+                        }
+                    }
+                )
             }
         }
     }
@@ -260,11 +297,6 @@ private fun DiagnosticsTopBar(
     onCaptureLevelChange: (DebugLogLevel) -> Unit,
     levelMenuOpen: Boolean,
     onLevelMenuOpenChange: (Boolean) -> Unit,
-    menuOpen: Boolean,
-    onMenuOpenChange: (Boolean) -> Unit,
-    onCopy: () -> Unit,
-    onShare: () -> Unit,
-    onClear: () -> Unit,
     onCloseSearch: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -378,31 +410,6 @@ private fun DiagnosticsTopBar(
                         }
                     }
                 }
-                Box {
-                    IconButton(onClick = { onMenuOpenChange(true) }) {
-                        Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = stringResource(R.string.debug_more_actions)
-                        )
-                    }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { onMenuOpenChange(false) }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.debug_copy)) },
-                            leadingIcon = { Icon(imageVector = Icons.Filled.ContentCopy, contentDescription = null) },
-                            onClick = onCopy
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.debug_share)) },
-                            leadingIcon = { Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = null) },
-                            onClick = onShare
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.debug_clear)) },
-                            leadingIcon = { Icon(imageVector = Icons.Filled.DeleteSweep, contentDescription = null) },
-                            onClick = onClear
-                        )
-                    }
-                }
             }
         }
     )
@@ -437,7 +444,16 @@ private fun DiagnosticsTabBar(pagerState: PagerState) {
                     // 双向联动：点击滚到页签，滑动 pager 同步 tab 选中态。
                     scope.launch { pagerState.animateScrollToPage(index) }
                 },
-                text = { Text(stringResource(tab.labelRes())) },
+                // Single line: the tab strings are the short forms, so three of them always fit a
+                // 320 dp row next to their icons instead of wrapping mid-word.
+                text = {
+                    Text(
+                        stringResource(tab.labelRes()),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center
+                    )
+                },
                 icon = {
                     Icon(imageVector = tab.iconRes(), contentDescription = null, modifier = Modifier.size(18.dp))
                 },
@@ -450,8 +466,8 @@ private fun DiagnosticsTabBar(pagerState: PagerState) {
 @StringRes
 private fun DiagnosticsTab.labelRes(): Int = when (this) {
     DiagnosticsTab.LOGS -> R.string.debug_logs
-    DiagnosticsTab.ENVIRONMENT -> R.string.debug_environment
-    DiagnosticsTab.APPS -> R.string.debug_targets
+    DiagnosticsTab.ENVIRONMENT -> R.string.debug_tab_environment
+    DiagnosticsTab.APPS -> R.string.debug_tab_targets
 }
 
 private fun DiagnosticsTab.iconRes(): ImageVector = when (this) {
@@ -498,27 +514,72 @@ private fun LogsPage(
         }
 
         item {
-            // 类型 chips：全部 + 框架/配置/Hook，带实时计数；「错误」归等级，不再作为类型。
-            // 计数达到 3 位时 4 个 chip 一行放不下，改为横向滚动而不是省略号截断。
+            // 类型筛选：全部 + 框架/配置/Hook，带实时计数；「错误」归等级，不再作为类型。
+            // ButtonGroup 而不是横向滚动的 chips：塞不下的项折进溢出菜单，而不是滑走看不见；
+            // 与首页「修改方式」同一个控件，两页的分段语言从此一致。
+            val allLabel = stringResource(R.string.debug_filter_all)
+            val types = DebugLogType.entries.filterNot { it == DebugLogType.ERROR }
+            // The group's content lambda collects items instead of composing them, so every string
+            // has to be resolved here, before the group.
+            val labels = types.associateWith { typeLabelText(it) }
+            // Same hand-rolled connected row as the home strategy selector: material3's ButtonGroup
+            // crashes in 1.5.0-rc01 when it has to fold.
+            //
+            // Content-sized and scrollable rather than four equal quarters: "Framework" does not fit
+            // a quarter of 320 dp in English and was ellipsized to "Framew…". Equal-width pills only
+            // work for labels that are short in every locale, which these are not.
+            //
+            // The counts live in a corner badge instead of inside the label: the label stays the
+            // filter's name and the number can change every log line without re-laying the row out.
+            val rows = listOf(allLabel) + types.map { labels.getValue(it) }
+            val counts = listOf(allEntries.size) + types.map { type -> allEntries.count { it.type == type } }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
             ) {
-                TypeChip(
-                    label = stringResource(R.string.debug_filter_all),
-                    count = allEntries.size,
-                    selected = selected.isEmpty(),
-                    onSelected = { onSelectedChange(emptySet()) }
-                )
-                DebugLogType.entries.filterNot { it == DebugLogType.ERROR }.forEach { type ->
-                    TypeChip(
-                        label = typeLabelText(type),
-                        count = allEntries.count { it.type == type },
-                        selected = selected.contains(type),
-                        onSelected = { onSelectedChange(setOf(type)) }
-                    )
+                rows.forEachIndexed { index, label ->
+                    val shapes = when (index) {
+                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                        rows.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                    }
+                    val checked = if (index == 0) selected.isEmpty() else selected.contains(types[index - 1])
+                    Box {
+                        ToggleButton(
+                            checked = checked,
+                            onCheckedChange = {
+                                onSelectedChange(if (index == 0) emptySet() else setOf(types[index - 1]))
+                            },
+                            shapes = shapes,
+                            // The extra end padding is the gutter the count badge sits in, so the
+                            // number never lands on top of a short label such as "All".
+                            contentPadding = PaddingValues(start = 12.dp, end = 22.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                maxLines = 1,
+                                softWrap = false,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        Text(
+                            text = counts[index].toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            // The checked pill is filled with `primary` (a light tint in dark
+                            // themes), so its badge has to be drawn in `onPrimary` to stay legible;
+                            // unchecked items sit on the neutral surface and take the muted role.
+                            color = if (checked) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-8).dp, y = 5.dp)
+                        )
+                    }
                 }
             }
         }

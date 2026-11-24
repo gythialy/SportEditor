@@ -45,31 +45,36 @@ import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -92,6 +97,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
@@ -115,8 +121,11 @@ import io.github.sporteditor.ui.theme.Dimensions
 import io.github.sporteditor.ui.theme.Motion
 import io.github.sporteditor.ui.theme.alertWash
 import io.github.sporteditor.ui.theme.animationsEnabled
+import io.github.sporteditor.ui.theme.brandAccent
 import io.github.sporteditor.ui.theme.cardContainerColor
+import io.github.sporteditor.ui.theme.cardShape
 import io.github.sporteditor.ui.theme.contentInset
+import io.github.sporteditor.ui.theme.rememberMorphShape
 import io.github.sporteditor.ui.theme.windowWidthDp
 import io.github.sporteditor.ui.theme.withTabularNumerals
 import java.text.NumberFormat
@@ -162,36 +171,38 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
+                // The expressive bar owns the two-line title now: a title slot and a subtitle
+                // slot, instead of a hand-rolled Column that had to be re-measured on every
+                // change to the bar's height or insets.
                 title = {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = stringResource(
-                                R.string.home_subtitle,
-                                AppTarget.entries.size,
-                                enabledCount
-                            ),
-                            style = MaterialTheme.typography.labelMedium.withTabularNumerals(),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLargeEmphasized,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                subtitle = {
+                    Text(
+                        text = stringResource(
+                            R.string.home_subtitle,
+                            AppTarget.entries.size,
+                            enabledCount
+                        ),
+                        style = MaterialTheme.typography.labelMediumEmphasized.withTabularNumerals(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 },
                 actions = {
-                    ConnectionPill(
+                    // One control in the app bar: the split button reports the connection and its
+                    // menu carries both follow-up destinations, so the settings gear is gone.
+                    ConnectionSplitButton(
                         connected = state.connected,
-                        onClick = { showConnectionSheet = true }
+                        onClick = { showConnectionSheet = true },
+                        onOpenSettings = onOpenSettings
                     )
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = stringResource(R.string.settings_title)
-                        )
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -254,7 +265,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ConnectionPill(connected: Boolean, onClick: () -> Unit) {
+private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpenSettings: () -> Unit) {
     val container = if (connected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -265,37 +276,66 @@ private fun ConnectionPill(connected: Boolean, onClick: () -> Unit) {
     } else {
         MaterialTheme.colorScheme.error
     }
-    val dot = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+    // Brand anchor: the one place the app's own green stays visible under dynamic colour.
+    val dot = if (connected) brandAccent() else MaterialTheme.colorScheme.error
     val label = stringResource(
         if (connected) R.string.status_badge_connected else R.string.status_badge_disconnected
     )
-    // At 320 dp the title and this pill were left about 18 dp between them; the dot alone still
-    // carries the state, and the full label stays available to TalkBack.
+    // At 320 dp the app-bar title and this control were left about 18 dp between them; the dot
+    // alone still carries the state, and the full label stays available to TalkBack.
     val compact = windowWidthDp() < 360.dp
 
-    Row(
-        modifier = Modifier
-            .clip(CircleShape)
-            .background(container)
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = label }
-            .padding(horizontal = if (compact) 8.dp else 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(dot)
+    Box {
+        SplitButtonLayout(
+            leadingButton = {
+                SplitButtonDefaults.LeadingButton(
+                    // The connection steps are a first-run hint, so the left half only opens them
+                    // while the framework has not connected. Once it has, the half is a plain
+                    // status indicator: tapping it does nothing and TalkBack reads the label
+                    // instead of promising a page that no longer exists.
+                    onClick = { if (!connected) onClick() },
+                    modifier = when {
+                        connected -> Modifier.clearAndSetSemantics { contentDescription = label }
+                        compact -> Modifier.semantics { contentDescription = label }
+                        else -> Modifier
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = container,
+                        contentColor = content
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(dot)
+                    )
+                    if (!compact) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(text = label, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            },
+            // Split button, not a decorated pill: the leading half reports the state and opens the
+            // connection sheet, the trailing half goes straight to the settings. No menu in
+            // between: a "view steps" item would only repeat what the leading half already does,
+            // and a one-item menu costs a tap for nothing.
+            trailingButton = {
+                SplitButtonDefaults.TrailingButton(
+                    onClick = onOpenSettings,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = container,
+                        contentColor = content
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = stringResource(R.string.settings_title),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         )
-        if (!compact) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = content
-            )
-        }
     }
 }
 
@@ -338,7 +378,7 @@ private fun DisconnectedCard(onViewSteps: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onViewSteps),
-        shape = MaterialTheme.shapes.large,
+        shape = cardShape(),
         colors = CardDefaults.cardColors(
             containerColor = alertWash(),
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -426,6 +466,8 @@ private fun AppCard(
     // unrelated text swaps. It starts at the stored value, so nothing animates on first composition.
     val readout = remember { Animatable(settings.value.toFloat()) }
     var readoutMode by remember { mutableStateOf(settings.mode) }
+    // Captured here: the motion scheme is a composable read, and the effect below is not.
+    val settleSpec = Motion.settle()
     LaunchedEffect(settings.value, settings.mode) {
         if (settings.mode != readoutMode) {
             // Switching strategy changes what the number means (a multiplier became an amount), so
@@ -433,7 +475,7 @@ private fun AppCard(
             readoutMode = settings.mode
             readout.snapTo(settings.value.toFloat())
         } else {
-            readout.animateTo(settings.value.toFloat(), Motion.settle())
+            readout.animateTo(settings.value.toFloat(), settleSpec)
         }
     }
     val readoutValue = readout.value.roundToInt()
@@ -458,7 +500,7 @@ private fun AppCard(
             .semantics {
                 stateDescription = if (expanded) expandedState else collapsedState
             },
-        shape = MaterialTheme.shapes.large,
+        shape = cardShape(),
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor(),
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -649,9 +691,19 @@ private fun ModeSelector(
     // WeRun syncs increments, so a constant fixed value can never work there: the option is not
     // offered at all instead of being shown disabled.
     val modes = StepMode.entries.filter { !(target == AppTarget.WECHAT && it == StepMode.REPLACE) }
-    // Four segments cannot hold the long labels at 360 dp (they get ellipsized), so the short set
-    // takes over; with three segments the full words fit and read better.
+    // Four labels do not fit at 320 dp once the row has to share the width equally, so the short
+    // set takes over; with three segments the full words fit.
+    // Four labels do not fit at 320 dp once the group adds its own item padding, so the short set
+    // takes over; with three segments the full words fit. The recommendation marker is a text run
+    // rather than an icon slot: an icon costs ~20 dp per item and that was what pushed the fourth
+    // segment past the group's width.
     val abbrev = modes.size > 3
+    val star = stringResource(R.string.mode_recommended)
+    // The star is a badge drawn over the button, not part of its label: putting it in the string
+    // cost width inside an equal quarter of the row and clipped the option's own name.
+    val modeLabels = modes.associateWith { mode ->
+        stringResource(if (abbrev) mode.shortLabelRes() else mode.labelRes())
+    }
 
     // A stored REPLACE from an older version would leave no selected option; snap it back.
     LaunchedEffect(target, mode) {
@@ -674,40 +726,59 @@ private fun ModeSelector(
             trailing()
         }
 
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        // Connected toggle buttons rather than material3's ButtonGroup: 1.5.0-rc01's group
+        // measures its overflow button with `constraints.copy(maxWidth = remainingSpace +
+        // overflowWidth)`, which throws "maxWidth must be >= minWidth" whenever a full-width group
+        // has to fold. Hand-rolling the row also gives each segment an equal quarter of the width,
+        // and leaves room for the recommendation badge above the label.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
+        ) {
             modes.forEachIndexed { index, item ->
-                SegmentedButton(
-                    selected = item == mode,
-                    onClick = { onModeChange(item) },
-                    shape = SegmentedButtonDefaults.itemShape(index, modes.size),
-                    label = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = stringResource(
-                                    if (abbrev) item.shortLabelRes() else item.labelRes()
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            // The star marks the strategy recommended for this app; it stays on
-                            // that option regardless of what is currently selected.
-                            if (item == target.recommendedMode()) {
-                                Text(
-                                    text = stringResource(R.string.mode_recommended),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .padding(start = 2.dp)
-                                        .offset(y = (-6).dp)
-                                )
-                            }
-                        }
-                    },
-                    // No check glyph: it reserved enough width that "Multiply" was clipped in
-                    // English, and the filled container plus the shared border already say which
-                    // option is active.
-                    icon = {}
-                )
+                val shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    modes.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    ToggleButton(
+                        checked = item == mode,
+                        onCheckedChange = { onModeChange(item) },
+                        shapes = shapes,
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = modeLabels.getValue(item),
+                            modifier = Modifier.weight(1f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    // The recommendation is a corner badge, not part of the label: a superscript
+                    // star stays out of the text run, so the label keeps its centred position and
+                    // the badge never competes with the label for width.
+                    if (item == target.recommendedMode()) {
+                        Text(
+                            text = star,
+                            style = MaterialTheme.typography.labelSmall,
+                            // The badge inherits the button's own content colour when the option is
+                            // checked (the pill is a light `primary` tint, so anything lighter
+                            // vanishes), and takes the tertiary accent when it sits on the neutral
+                            // surface instead.
+                            color = if (item == mode) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.tertiary
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-12).dp, y = 4.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -828,7 +899,7 @@ private fun StepEditor(
                 isError = isError,
                 singleLine = true,
                 // Tabular figures keep the counting readout from shifting sideways as digits change.
-                textStyle = MaterialTheme.typography.headlineSmall.copy(
+                textStyle = MaterialTheme.typography.displaySmallEmphasized.copy(
                     textAlign = TextAlign.Center,
                     fontFeatureSettings = "tnum"
                 ),
@@ -888,6 +959,7 @@ private fun StepEditor(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StepButton(symbol: String, description: String, enabled: Boolean, onStep: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
@@ -916,24 +988,22 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
         MaterialTheme.colorScheme.onSurfaceVariant
     }
 
-    // A held button depresses slightly: the repeat has a 400 ms lead-in, and without this the
-    // control looks dead for that whole beat. It also tells the user the hold was registered.
-    val pressScale by animateFloatAsState(
-        targetValue = if (pressed && enabled) 0.92f else 1f,
+    // A held button morphs from the circle it rests as into a 20 dp rounded square: the repeat has
+    // a 400 ms lead-in, and without this the control looks dead for that whole beat. Shape rather
+    // than scale so the acknowledgement reads as the control changing state, not shrinking.
+    val pressProgress by animateFloatAsState(
+        targetValue = if (pressed && enabled) 1f else 0f,
         animationSpec = Motion.press(),
         label = "step-press"
     )
+    val shape = rememberMorphShape(MaterialShapes.Circle, MaterialShapes.Square, pressProgress)
 
     Surface(
         color = container,
         contentColor = content,
-        shape = CircleShape,
+        shape = shape,
         modifier = Modifier
             .size(56.dp)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
             .semantics {
                 contentDescription = description
                 role = Role.Button
@@ -1121,7 +1191,12 @@ private fun MaxStepsField(maxSteps: Int, onDraftChange: (Int?) -> Unit, onMaxSte
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConnectionSheet(state: SettingsState, onDismiss: () -> Unit) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // The old rememberModalBottomSheetState(skipPartiallyExpanded = true) is deprecated: the
+    // anchors are now declared explicitly instead of inferred from the sheet height.
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded)
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,

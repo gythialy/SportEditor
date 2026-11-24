@@ -51,8 +51,10 @@ android {
         applicationId = "io.github.sporteditor"
         minSdk = 26
         targetSdk = 37
-        versionCode = 106
-        versionName = "1.4.1"
+        // v1.0 restarts the public version line; the code stays monotonic so installs update
+        // in place instead of requiring an uninstall.
+        versionCode = 107
+        versionName = "1.0.0"
     }
 
     signingConfigs {

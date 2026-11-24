@@ -62,6 +62,29 @@ class SportEditorApp :
         @Volatile
         private var serviceHolder: XposedService? = null
 
+        /**
+         * Re-checks that the bound framework service still answers.
+         *
+         * Disabling the module in LSPosed or killing the framework does not always deliver
+         * `onServiceDied` to a process that is already running, so the cached binder can outlive the
+         * connection: the UI keeps claiming "connected" while nothing reaches the hooked apps.
+         * Calling a trivial method on the service is the cheapest liveness probe — it throws
+         * [XposedService.ServiceException] (a dead binder) instead of returning a value.
+         */
+        fun revalidateService(): Boolean {
+            val holder = serviceHolder ?: return false
+            // Two ways the answer can be "no": the binder is gone, or the framework is still
+            // answering but this module is in no app's scope — remote preferences, and therefore
+            // every setting, would reach nothing either way.
+            val alive = runCatching { holder.apiVersion }.isSuccess
+            val scoped = runCatching { holder.scope.any() }.getOrDefault(false)
+            if (!alive || !scoped) {
+                serviceHolder = if (alive) holder else null
+                notifyListeners(null)
+            }
+            return alive && scoped
+        }
+
         private val listeners = CopyOnWriteArraySet<(XposedService?) -> Unit>()
 
         val service: XposedService?

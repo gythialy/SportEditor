@@ -45,6 +45,14 @@ class MainActivity : ComponentActivity() {
         MainViewModel.factory((application as SportEditorApp).settingsRepository)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // The framework can go away while this activity is paused (module disabled, LSPosed restarted)
+        // and the death callback is not guaranteed, so the cached "connected" state is re-verified
+        // every time the screen comes back.
+        SportEditorApp.revalidateService()
+    }
+
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLanguageStore.wrap(newBase))
     }
@@ -71,27 +79,39 @@ class MainActivity : ComponentActivity() {
             // menus); dipping keeps a single tree, so the current screen and scroll survive.
             var appliedKey by rememberSaveable { mutableStateOf(ThemeModeStore.load(activity).storageKey) }
             var pendingKey by rememberSaveable { mutableStateOf<String?>(null) }
+            var appliedDynamic by rememberSaveable { mutableStateOf(DynamicColorStore.load(activity)) }
+            var pendingDynamic by rememberSaveable { mutableStateOf<Boolean?>(null) }
+            val hasPending = pendingKey != null || pendingDynamic != null
 
             val dip by animateFloatAsState(
-                targetValue = if (pendingKey != null) 0f else 1f,
+                targetValue = if (hasPending) 0f else 1f,
                 animationSpec = tween(
                     durationMillis = if (pendingKey != null) THEME_DIP_OUT_MS else THEME_DIP_IN_MS,
                     easing = FastOutSlowInEasing
                 ),
                 label = "theme-dip"
             )
-            LaunchedEffect(dip, pendingKey) {
-                val next = pendingKey ?: return@LaunchedEffect
+            // Both appearance preferences swap at the same seam: the content fades out, the
+            // scheme changes while it is invisible, then content fades back in.
+            LaunchedEffect(dip, pendingKey, pendingDynamic) {
                 if (dip > 0.02f) return@LaunchedEffect
-                ThemeModeStore.save(activity, ThemeMode.fromKey(next))
-                appliedKey = next
-                pendingKey = null
+                pendingKey?.let { next ->
+                    ThemeModeStore.save(activity, ThemeMode.fromKey(next))
+                    appliedKey = next
+                    pendingKey = null
+                }
+                pendingDynamic?.let { next ->
+                    DynamicColorStore.save(activity, next)
+                    appliedDynamic = next
+                    pendingDynamic = null
+                }
             }
 
             val themeMode = ThemeMode.fromKey(appliedKey)
             // What the settings row reports while a dip is in flight, so the user's choice shows up
             // immediately instead of after the fade.
             val requestedTheme = ThemeMode.fromKey(pendingKey ?: appliedKey)
+            val requestedDynamic = pendingDynamic ?: appliedDynamic
 
             // A forced theme overrides the system light/dark state, so the system bar icons have
             // to follow the app theme instead of the device theme.
@@ -103,7 +123,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            SportEditorTheme(themeMode = themeMode) {
+            SportEditorTheme(themeMode = themeMode, dynamicColor = appliedDynamic) {
                 // The page colour switches instantly at the seam while the content is invisible:
                 // animating it as well would overlap two transitions and flash the old surface
                 // between them. The dip already hides the moment the scheme flips.
@@ -148,6 +168,15 @@ class MainActivity : ComponentActivity() {
                                         } else {
                                             ThemeModeStore.save(activity, selected)
                                             appliedKey = selected.storageKey
+                                        }
+                                    },
+                                    dynamicColor = requestedDynamic,
+                                    onDynamicColorChange = { enabled ->
+                                        if (animations) {
+                                            pendingDynamic = enabled
+                                        } else {
+                                            DynamicColorStore.save(activity, enabled)
+                                            appliedDynamic = enabled
                                         }
                                     },
                                     language = language,

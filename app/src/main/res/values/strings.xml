@@ -38,12 +38,13 @@
     <string name="about_title">关于</string>
     <string name="about_homepage">项目主页</string>
     <string name="about_license">许可证</string>
-    <string name="settings_version">版本</string>
 
     <string name="theme_title">主题</string>
     <string name="theme_system">跟随系统</string>
     <string name="theme_light">浅色</string>
     <string name="theme_dark">深色</string>
+    <string name="dynamic_color_title">动态取色</string>
+    <string name="dynamic_color_desc">跟随壁纸配色（Android 12 及以上）</string>
 
     <!-- Steps editor -->
     <string name="label_mode">修改方式</string>
@@ -87,10 +88,11 @@
     <!-- Diagnostics -->
     <string name="debug_title">诊断</string>
     <string name="debug_desc">环境、配置与 Hook 日志</string>
-    <string name="debug_more_actions">更多操作</string>
     <string name="debug_environment">环境</string>
     <string name="debug_targets">目标应用</string>
     <string name="debug_logs">日志</string>
+    <string name="debug_tab_environment">环境</string>
+    <string name="debug_tab_targets">目标应用</string>
     <string name="debug_log_count">%1$d 条</string>
     <string name="debug_filter_all">全部</string>
     <string name="debug_type_framework">框架</string>

@@ -3,6 +3,7 @@ package io.github.sporteditor.ui.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -11,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import io.github.sporteditor.ui.ThemeMode
+import io.github.sporteditor.ui.theme.color.Blend
 
 private val LightColors = lightColorScheme(
     primary = GreenPrimary,
@@ -104,6 +107,24 @@ fun cardContainerColor(): Color {
     }
 }
 
+/**
+ * The brand green, pulled toward the host palette so it stops fighting it.
+ *
+ * Under dynamic colour the system hands out a wallpaper palette and the brand hue is the only
+ * identity left; harmonising rotates it by at most 15 degrees toward the palette's primary, keeping
+ * its chroma and tone. Without dynamic colour the scheme primary already is the brand, so
+ * harmonising it is a no-op.
+ *
+ * Use it for brand anchors only — the status dot, the about row, a version marker — not as a
+ * replacement for every `primary` use: most primary roles belong to the surface palette.
+ */
+@Composable
+fun brandAccent(): Color {
+    val scheme = MaterialTheme.colorScheme
+    val brand = if (scheme.background.luminance() < 0.5f) DarkPrimary else GreenPrimary
+    return Color(Blend.harmonize(brand.toArgb(), scheme.primary.toArgb()))
+}
+
 @Composable
 fun SportEditorTheme(themeMode: ThemeMode = ThemeMode.SYSTEM, dynamicColor: Boolean = true, content: @Composable () -> Unit) {
     val darkTheme = themeMode.resolveDarkTheme()
@@ -120,6 +141,11 @@ fun SportEditorTheme(themeMode: ThemeMode = ThemeMode.SYSTEM, dynamicColor: Bool
 
     MaterialTheme(
         colorScheme = colorScheme,
+        // Every Material component that animates (switch, sheet, dialog, tab, FAB, date picker…)
+        // reads its specs from this scheme, so one line switches the whole library to springs.
+        // Deliberately not MaterialExpressiveTheme: its defaults fall back to a light-only
+        // expressive palette, which would flatten the dark theme and the dynamic palette.
+        motionScheme = MotionScheme.expressive(),
         typography = SportEditorTypography,
         shapes = SportEditorShapes,
         content = content

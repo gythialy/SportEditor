@@ -1,5 +1,6 @@
 package io.github.sporteditor.ui
 
+import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,14 +25,16 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +43,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -59,17 +63,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.sporteditor.BuildConfig
 import io.github.sporteditor.R
-import io.github.sporteditor.ui.art.UpdateSpinner
 import io.github.sporteditor.ui.theme.Dimensions
+import io.github.sporteditor.ui.theme.brandAccent
 import io.github.sporteditor.ui.theme.cardContainerColor
+import io.github.sporteditor.ui.theme.cardShape
 import io.github.sporteditor.ui.theme.contentInset
 import io.github.sporteditor.ui.theme.windowWidthDp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
     themeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    dynamicColor: Boolean,
+    onDynamicColorChange: (Boolean) -> Unit,
     language: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     updateState: UpdateUiState,
@@ -132,6 +139,18 @@ fun SettingsScreen(
                         subtitle = stringResource(themeMode.labelRes),
                         onClick = { showThemeDialog = true }
                     )
+                    // Dynamic colour exists only from Android 12: below that the system has no
+                    // palette to hand out, so the row would be a switch that does nothing.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        RowDivider()
+                        SettingsSwitchRow(
+                            icon = Icons.Filled.Wallpaper,
+                            title = stringResource(R.string.dynamic_color_title),
+                            subtitle = stringResource(R.string.dynamic_color_desc),
+                            checked = dynamicColor,
+                            onCheckedChange = onDynamicColorChange
+                        )
+                    }
                     RowDivider()
                     // Diagnostics sits above the update row: it is the everyday troubleshooting
                     // entry, while "check for updates" is a rarely used network action.
@@ -170,25 +189,6 @@ fun SettingsScreen(
                         title = stringResource(R.string.about_license),
                         subtitle = "MIT",
                         onClick = { onOpenUrl(LICENSE_URL) }
-                    )
-                    RowDivider()
-                    ListItem(
-                        leadingContent = {
-                            Icon(
-                                imageVector = Icons.Filled.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        headlineContent = { Text(stringResource(R.string.settings_version)) },
-                        supportingContent = {
-                            Text(
-                                "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                 }
             }
@@ -240,7 +240,7 @@ private fun SectionLabel(labelRes: Int, modifier: Modifier = Modifier) {
 private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
+        shape = cardShape(),
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor()
         ),
@@ -289,6 +289,34 @@ private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onCl
     )
 }
 
+/** A settings row whose trailing control is a switch instead of a disclosure chevron. */
+@Composable
+private fun SettingsSwitchRow(icon: ImageVector, title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    ListItem(
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        headlineContent = { Text(title) },
+        supportingContent = {
+            Text(
+                text = subtitle,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        trailingContent = {
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        // The row is clickable as well: tapping the title toggles, the switch consumes its own tap.
+        modifier = Modifier.clickable { onCheckedChange(!checked) }
+    )
+}
+
 /** Mutually exclusive update states; drives the marker and the trailing action of [UpdateRow]. */
 private enum class UpdateStatus { Idle, Checking, UpToDate, Available, Error }
 
@@ -305,6 +333,7 @@ private fun UpdateUiState.status(): UpdateStatus = when {
  * other rows put their chevron. There is no supporting line and nothing is appended below, so the
  * version text can never be squeezed by the action and checking never pushes the card under it.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onOpenRelease: (String) -> Unit) {
     val status = updateState.status()
@@ -313,10 +342,12 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
 
     ListItem(
         leadingContent = {
+            // Brand anchor: the update row is the one place the version lives now, so it carries
+            // the brand hue instead of the neutral row icon tint.
             Icon(
                 imageVector = Icons.Filled.SystemUpdate,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = brandAccent()
             )
         },
         headlineContent = { Text(stringResource(R.string.update_title)) },
@@ -373,7 +404,7 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
         },
         trailingContent = {
             when (status) {
-                UpdateStatus.Checking -> UpdateSpinner(
+                UpdateStatus.Checking -> ContainedLoadingIndicator(
                     modifier = Modifier
                         .size(18.dp)
                         .semantics { contentDescription = checkingLabel }
