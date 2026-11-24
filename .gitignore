@@ -22,3 +22,6 @@
 # Signing material
 *.jks
 *.keystore
+
+# Rendered design previews stay local; the mockup itself is the committed artifact.
+/design/ui-expressive/*.png
