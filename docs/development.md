@@ -16,7 +16,7 @@
 
 ## 架构与实现
 
-- 入口 `io.github.sporteditor.hook.SportEditorModule` 继承
+- 入口 `io.github.gythialy.sporteditor.hook.SportEditorModule` 继承
   `io.github.libxposed.api.XposedModule`，通过 `META-INF/xposed/java_init.list` 注册；
   模块信息在 `META-INF/xposed/module.prop`。
 - 在目标进程 hook `android.hardware.SystemSensorManager` 的监听注册，记录
@@ -68,7 +68,7 @@
 ## 目录结构
 
 ```text
-app/src/main/java/io/github/sporteditor/
+app/src/main/java/io/github/gythialy/sporteditor/
 ├── SportEditorApp.kt          # Application，Xposed 服务连接
 ├── data/                      # 目标应用、设置模型、Remote Preferences 仓库
 ├── debug/                     # 诊断日志存储、跨进程发送/接收

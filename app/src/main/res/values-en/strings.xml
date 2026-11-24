@@ -38,12 +38,13 @@
     <string name="about_title">About</string>
     <string name="about_homepage">Homepage</string>
     <string name="about_license">License</string>
-    <string name="settings_version">Version</string>
 
     <string name="theme_title">Theme</string>
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="dynamic_color_title">Dynamic color</string>
+    <string name="dynamic_color_desc">Match wallpaper colors (Android 12+)</string>
 
     <!-- Steps editor -->
     <string name="label_mode">Strategy</string>
@@ -87,10 +88,11 @@
     <!-- Diagnostics -->
     <string name="debug_title">Diagnostics</string>
     <string name="debug_desc">Env, config and hook logs</string>
-    <string name="debug_more_actions">More actions</string>
     <string name="debug_environment">Environment</string>
     <string name="debug_targets">Target apps</string>
     <string name="debug_logs">Logs</string>
+    <string name="debug_tab_environment">Env</string>
+    <string name="debug_tab_targets">Apps</string>
     <string name="debug_log_count">%1$d entries</string>
     <string name="debug_filter_all">All</string>
     <string name="debug_type_framework">Framework</string>

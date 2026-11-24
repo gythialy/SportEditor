@@ -57,8 +57,9 @@
 
 > 若本应用顶部提示「LSPosed 服务未连接」，说明模块尚未在 LSPosed 中启用，或框架版本过低。
 
-> **1.4.0 升级说明**：应用 ID 由 `io.github.gythialy.sporteditor` 改为 `io.github.sporteditor`，
-> 两者会被系统视为不同应用。请先卸载旧版（`adb uninstall io.github.gythialy.sporteditor`）再安装 1.4.0，
+> **1.0.0 升级说明**：应用 ID 由 `io.github.sporteditor` 改回 `io.github.gythialy.sporteditor`
+> （符合 LSPosed 模块仓库对 `io.github.{username}` 的命名要求）。
+> 两者会被系统视为不同应用，请先卸载旧版（`adb uninstall io.github.sporteditor`）再安装 1.0.0，
 > 旧包的本地设置与 LSPosed 远程配置不会迁移，需要在新包内重新启用目标应用。
 
 ## 构建
