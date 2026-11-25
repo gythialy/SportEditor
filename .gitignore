@@ -23,5 +23,9 @@
 *.jks
 *.keystore
 
+# Release workflow intermediates when its steps are replayed locally
+/dist/
+/release-body.md
+
 # Rendered design previews stay local; the mockup itself is the committed artifact.
 /design/ui-expressive/*.png

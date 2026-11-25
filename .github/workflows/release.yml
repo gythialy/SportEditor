@@ -19,6 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Fail fast when the tag and the app version disagree: the module repository compares
+      # versionCode, so a stale or mismatched tag would publish an APK users cannot update to.
+      - name: Validate version and tag
+        if: startsWith(github.ref, 'refs/tags/')
+        id: version
+        run: |
+          set -euo pipefail
+          version_code=$(sed -n 's/^[[:space:]]*versionCode = \([0-9][0-9]*\)$/\1/p' app/build.gradle.kts)
+          version_name=$(sed -n 's/^[[:space:]]*versionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          if [ -z "$version_code" ] || [ -z "$version_name" ]; then
+            echo "::error::Could not read versionCode/versionName from app/build.gradle.kts" >&2
+            exit 1
+          fi
+          if [ "v${version_name}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match versionName ${version_name}; expected v${version_name}" >&2
+            exit 1
+          fi
+          echo "code=${version_code}" >> "$GITHUB_OUTPUT"
+          echo "name=${version_name}" >> "$GITHUB_OUTPUT"
+          echo "module_tag=${version_code}-${version_name}" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -68,10 +89,60 @@ jobs:
           name: release-apk
           path: dist/*.apk
 
+      # One body feeds both release channels: a curated .github/release-notes/<tag>.md when
+      # present, otherwise GitHub's generated notes. Never let them drift apart.
+      - name: Prepare release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          if [ -f "$notes" ]; then
+            cp "$notes" release-body.md
+          else
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${GITHUB_REF_NAME}" --jq .body > release-body.md
+          fi
+          test -s release-body.md
+
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
           files: dist/*.apk
-          generate_release_notes: true
+          body_path: release-body.md
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+      # The in-app updater reads gythialy/SportEditor releases; LSPosed/Vector and
+      # modules.lsposed.org read Xposed-Modules-Repo/<package>. Both channels must be published,
+      # and the module repository release tag must be VersionCode-VersionName.
+      - name: Publish to Xposed module repo
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.XPOSED_REPO_TOKEN }}
+          MODULE_REPO: Xposed-Modules-Repo/io.github.gythialy.sporteditor
+          MODULE_TAG: ${{ steps.version.outputs.module_tag }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          PRERELEASE: ${{ contains(github.ref_name, '-') }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::Missing XPOSED_REPO_TOKEN secret; see docs/release.md" >&2
+            exit 1
+          fi
+          apk="dist/SportEditor-${GITHUB_REF_NAME}.apk"
+          test -f "$apk"
+          extra=()
+          if [ "$PRERELEASE" = "true" ]; then
+            extra+=(--prerelease)
+          fi
+          if gh release view "$MODULE_TAG" --repo "$MODULE_REPO" >/dev/null 2>&1; then
+            gh release edit "$MODULE_TAG" --repo "$MODULE_REPO" \
+              --title "$VERSION_NAME" --notes-file release-body.md
+            gh release upload "$MODULE_TAG" "$apk" --repo "$MODULE_REPO" --clobber
+          else
+            gh release create "$MODULE_TAG" "$apk" --repo "$MODULE_REPO" \
+              --title "$VERSION_NAME" --notes-file release-body.md "${extra[@]}"
+          fi
+          echo "Published ${MODULE_TAG} to ${MODULE_REPO}"
