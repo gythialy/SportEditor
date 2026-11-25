@@ -53,8 +53,8 @@ android {
         targetSdk = 37
         // v1.0 restarts the public version line; the code stays monotonic so installs update
         // in place instead of requiring an uninstall.
-        versionCode = 107
-        versionName = "1.0.0"
+        versionCode = 108
+        versionName = "1.0.1"
     }
 
     signingConfigs {
