@@ -125,7 +125,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 | --- | --- | --- |
 | [ci.yml](../.github/workflows/ci.yml) | push / PR | `spotlessCheck`、单元测试、`lintDebug`、debug 与 release 构建；上传 `release-apk-ci`（14 天）与测试报告 |
 | [codeql.yml](../.github/workflows/codeql.yml) | push / PR / 每周 | CodeQL Java/Kotlin 静态分析；构建时禁用 Gradle 缓存并强制重编译，确保提取到 Kotlin 代码 |
-| [release.yml](../.github/workflows/release.yml) | `v*` tag / 手动 | 解码 secrets、构建并校验签名 APK，tag 构建创建 GitHub Release |
+| [release.yml](../.github/workflows/release.yml) | `v*` tag / 手动 | 校验 tag 与版本号、解码 secrets、构建并校验签名 APK，tag 构建创建 GitHub Release 并同步发布到 Xposed 模块仓库 |
 
 CI 的 release APK 在没有签名 secrets 时使用 debug 签名，仅用于测试；
 release workflow 设置 `REQUIRE_RELEASE_SIGNING=true`，缺少签名材料会直接失败。
