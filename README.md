@@ -17,7 +17,7 @@
 
 - **默认关闭，手动启用**：只修改已打开开关且在 LSPosed 作用域内的应用。
 - **每个应用独立配置**：开关、修改方式、步数、每日上限互不影响。
-- **四种修改方式**：倍率、增加、自动增加、固定值。
+- **四种修改方式**：倍率、增加、自动、固定（微信不提供固定）。
 - **每日步数上限**：以本地自然日为周期独立累计，单日增量封顶；上报的传感器值跨天保持连续，目标应用每天从 0 重新累计到上限，零点不会看到回跳。
 - **实时生效**：设置写入 Remote Preferences，目标应用运行/解冻后自动应用，通常无需重启；当日进度与随机额度会持久化到目标应用私有配置，进程重启、设备重启后都能续算。
 - **现代 API**：基于 libxposed API 102，不使用已废弃的 `de.robv.android.xposed` API。
@@ -41,13 +41,15 @@
 - 已安装并启用 **LSPosed 2.0+**（支持 libxposed API 101/102 的发行版，如 Vector / JingMatrix 维护版；官方 1.9.2 仅支持 API 100）。
 - 设备已 root（Magisk / KernelSU / APatch 任一方案）。
 
-## 安装与使用
+## 快速开始
 
-1. 安装 APK，在 LSPosed 管理器中启用「运动修改器」。
-2. 在作用域中勾选微信 / 支付宝 / QQ / 微博（模块已通过 `scope.list` 预置）。
-3. 强制停止目标应用（或重启手机），使其加载模块。
-4. 打开本应用，手动打开要修改的应用开关，再设置修改方式、步数与上限；设置会实时同步。
-5. 重新打开目标应用查看步数。
+1. 从 [Releases](https://github.com/gythialy/SportEditor/releases) 安装 APK，在 LSPosed 管理器中启用「运动修改器」。
+2. 在作用域中勾选要修改的微信 / 支付宝 / QQ / 微博（模块已通过 `scope.list` 预置）。
+3. 强制停止目标应用后重新打开，使其加载模块（首次启用或升级后必做）。
+4. 打开本应用，在对应卡片上打开开关（默认全部关闭），设置修改方式、步数与每日上限。
+5. 重新进入目标应用的运动页面查看步数。
+
+四种修改方式、每日上限与跨天语义、设置项、诊断与常见问题详见 **[用户手册](docs/user-guide.md)**。
 
 ## 构建
 
@@ -60,17 +62,6 @@
 ./gradlew spotlessApply             # 提交前格式化
 ```
 
-完整的开发环境、代码结构、测试与 CI 说明见 **[开发文档](docs/development.md)**。
-
-## 文档
-
-| 文档 | 内容 |
-| --- | --- |
-| [开发文档](docs/development.md) | 架构原理、目录结构、构建环境、测试与 CI/CD |
-| [模拟器测试](docs/emulator-test.md) | root AVD + Magisk + Vector 的端到端验证环境 |
-| [设计系统（实现态）](docs/design/README.md) | 当前落地的色彩、字阶、形状、动效、布局与组件规格 |
-| [发布与签名](docs/release.md) | 本地签名、GitHub Secrets 与发布流程 |
-
 ## 许可证
 
 本项目基于 [MIT License](LICENSE) 开源，Copyright © 2026 Goren G。
@@ -79,3 +70,15 @@
 
 本项目仅用于学习 Android Hook 技术与测试，请勿用于违反应用服务条款或法律法规的用途。
 使用本模块可能违反相关应用的用户协议，由此产生的一切后果由使用者自行承担。
+
+## 文档
+
+在线阅读：[SportEditor 文档站](https://gythialy.github.io/SportEditor/)。
+
+| 文档 | 内容 |
+| --- | --- |
+| [用户手册](docs/user-guide.md) | 安装激活、四种修改方式、每日上限、设置项、诊断与常见问题 |
+| [开发文档](docs/development.md) | 架构原理、目录结构、构建环境、测试与 CI/CD |
+| [模拟器测试](docs/emulator-test.md) | root AVD + Magisk + Vector 的端到端验证环境 |
+| [设计系统（实现态）](docs/design/README.md) | 当前落地的色彩、字阶、形状、动效、布局与组件规格 |
+| [发布与签名](docs/release.md) | 本地签名、GitHub Secrets 与发布流程 |

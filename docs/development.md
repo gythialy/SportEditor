@@ -1,7 +1,7 @@
 # 开发文档
 
-本文档覆盖 SportEditor 的架构、构建环境、测试与 CI/CD。面向使用与安装的快速说明见
-[README](../README.md)。
+本文档覆盖 SportEditor 的架构、构建环境、测试与 CI/CD。面向最终用户的安装、配置与排错说明见
+[用户手册](user-guide.md)。
 
 ## 技术栈
 
@@ -114,7 +114,7 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
   ```
 - 模拟器端到端：Magisk 27 + Vector 2.2（API 102）+ API 34 arm64 AVD，验证模块识别、
   目标进程加载、Hook 安装、Remote Preferences 读取与在线更新、开关/Reset/停用、诊断页。
-  环境可用 [scripts/emulator](../scripts/emulator/README.md) 一键重建，详细步骤见
+  环境可用 [scripts/emulator](https://github.com/gythialy/SportEditor/blob/main/scripts/emulator/README.md) 一键重建，详细步骤见
   [模拟器测试](emulator-test.md)。
 - **限制**：模拟器没有计步传感器，真实步数改写只能在真机验证；微信/支付宝需要登录账号
   才能查看运动数据。
@@ -123,15 +123,15 @@ release 签名材料与 GitHub Secrets 见 [发布与签名](release.md)。
 
 | Workflow | 触发 | 内容 |
 | --- | --- | --- |
-| [ci.yml](../.github/workflows/ci.yml) | push / PR | `spotlessCheck`、单元测试、`lintDebug`、debug 与 release 构建；上传 `release-apk-ci`（14 天）与测试报告 |
-| [codeql.yml](../.github/workflows/codeql.yml) | push / PR / 每周 | CodeQL Java/Kotlin 静态分析；构建时禁用 Gradle 缓存并强制重编译，确保提取到 Kotlin 代码 |
-| [release.yml](../.github/workflows/release.yml) | `v*` tag / 手动 | 校验 tag 与版本号、解码 secrets、构建并校验签名 APK，tag 构建创建 GitHub Release 并同步发布到 Xposed 模块仓库 |
+| [ci.yml](https://github.com/gythialy/SportEditor/blob/main/.github/workflows/ci.yml) | push / PR | `spotlessCheck`、单元测试、`lintDebug`、debug 与 release 构建；上传 `release-apk-ci`（14 天）与测试报告 |
+| [codeql.yml](https://github.com/gythialy/SportEditor/blob/main/.github/workflows/codeql.yml) | push / PR / 每周 | CodeQL Java/Kotlin 静态分析；构建时禁用 Gradle 缓存并强制重编译，确保提取到 Kotlin 代码 |
+| [release.yml](https://github.com/gythialy/SportEditor/blob/main/.github/workflows/release.yml) | `v*` tag / 手动 | 校验 tag 与版本号、解码 secrets、构建并校验签名 APK，tag 构建创建 GitHub Release 并同步发布到 Xposed 模块仓库 |
 
 CI 的 release APK 在没有签名 secrets 时使用 debug 签名，仅用于测试；
 release workflow 设置 `REQUIRE_RELEASE_SIGNING=true`，缺少签名材料会直接失败。
 
 Dependabot 每周检查 Gradle 依赖与 GitHub Actions，配置见
-[`.github/dependabot.yml`](../.github/dependabot.yml)。
+[`.github/dependabot.yml`](https://github.com/gythialy/SportEditor/blob/main/.github/dependabot.yml)。
 
 ## 已知限制
 
