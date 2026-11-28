@@ -6,6 +6,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -124,6 +126,7 @@ import io.github.gythialy.sporteditor.ui.theme.Dimensions
 import io.github.gythialy.sporteditor.ui.theme.Motion
 import io.github.gythialy.sporteditor.ui.theme.ReadingMono
 import io.github.gythialy.sporteditor.ui.theme.ReadingMonoLabel
+import io.github.gythialy.sporteditor.ui.theme.Signal
 import io.github.gythialy.sporteditor.ui.theme.animationsEnabled
 import io.github.gythialy.sporteditor.ui.theme.cardBorderColor
 import io.github.gythialy.sporteditor.ui.theme.cardContainerColor
@@ -470,21 +473,53 @@ private fun DiagnosticsTopBar(
 @Composable
 private fun DiagnosticsTabBar(pagerState: PagerState) {
     val scope = rememberCoroutineScope()
+    val animations = animationsEnabled()
     TabRow(
         selectedTabIndex = pagerState.currentPage,
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         indicator = { tabPositions ->
-            // 接近设计稿 01/02/03 的 3px 底部短胶囊指示条。
-            Box(
-                Modifier
-                    .tabIndicatorOffset(tabPositions[pagerState.currentPage])
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .padding(horizontal = 42.dp)
-                    .clip(AppShapes.tabIndicator)
-                    .background(MaterialTheme.colorScheme.primary)
-            )
+            val current = pagerState.currentPage.coerceIn(tabPositions.indices)
+            // The 3 dp capsule and 42 dp inset are fixed by the design spec.
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    Modifier
+                        .tabIndicatorOffset(tabPositions[current])
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .padding(horizontal = 42.dp)
+                        .clip(AppShapes.tabIndicator)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+                // The signal head follows the pager fraction; glide keeps it from overshooting a tab.
+                val fraction = pagerState.currentPageOffsetFraction
+                val neighbour = when {
+                    fraction > 0f -> (current + 1).coerceIn(tabPositions.indices)
+                    fraction < 0f -> (current - 1).coerceIn(tabPositions.indices)
+                    else -> current
+                }
+                val centre = tabPositions[current].left + tabPositions[current].width / 2f
+                val target = if (neighbour == current) {
+                    centre
+                } else {
+                    val next = tabPositions[neighbour].left + tabPositions[neighbour].width / 2f
+                    centre + (next - centre) * kotlin.math.abs(fraction)
+                }
+                val headX by animateDpAsState(
+                    targetValue = target - TabSignalHeadSize / 2f,
+                    animationSpec = if (animations) Motion.glide() else tween(durationMillis = 0),
+                    label = "tab-signal-head"
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        // Straddle the 3 dp capsule: a 5 dp head cannot fit inside its height.
+                        .offset(x = headX, y = -(TabSignalHeadSize + 3.dp) * 0.5f)
+                        .size(TabSignalHeadSize)
+                        .clip(CircleShape)
+                        .background(Signal.core())
+                )
+            }
         }
     ) {
         DiagnosticsTab.entries.forEachIndexed { index, tab ->
@@ -512,6 +547,8 @@ private fun DiagnosticsTabBar(pagerState: PagerState) {
         }
     }
 }
+
+private val TabSignalHeadSize = 5.dp
 
 @StringRes
 private fun DiagnosticsTab.labelRes(): Int = when (this) {
@@ -546,6 +583,11 @@ private fun LogsPage(
             allEntries.forEachIndexed { index, entry -> put(entry, "log-$index") }
         }
     }
+    // The first buffer is a snapshot, not a stream of arrivals: only keys appearing after this
+    // composition get an entrance. No per-row stagger over a 500-entry buffer.
+    val animations = animationsEnabled()
+    var readyForAnimation by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { readyForAnimation = true }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -676,11 +718,15 @@ private fun LogsPage(
                 LogCard(
                     entry = entry,
                     timeFormat = timeFormat,
-                    modifier = Modifier.animateItem(
-                        fadeInSpec = Motion.enter(),
-                        placementSpec = Motion.enter(),
-                        fadeOutSpec = Motion.leave()
-                    )
+                    modifier = if (readyForAnimation && animations) {
+                        Modifier.animateItem(
+                            fadeInSpec = Motion.enter(),
+                            placementSpec = Motion.enter(),
+                            fadeOutSpec = Motion.leave()
+                        )
+                    } else {
+                        Modifier
+                    }
                 )
             }
         }
@@ -736,39 +782,52 @@ private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier
             }
             .animateContentSize()
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Dimensions.Card, vertical = Dimensions.Gap),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = timeFormat.format(Date(entry.time)),
-                    style = ReadingMonoLabel,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // Earned edge: only an error lights a rail, outside the text column so no line sits on it.
+            if (entry.level == DebugLogLevel.ERROR) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.error)
                 )
-                LevelBadge(level = entry.level)
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = Dimensions.Card, vertical = Dimensions.Gap),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = timeFormat.format(Date(entry.time)),
+                        style = ReadingMonoLabel,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    LevelBadge(level = entry.level)
+                    Text(
+                        text = typeLabelText(entry.type) + " · " + entry.source,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Text(
-                    text = typeLabelText(entry.type) + " · " + entry.source,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
+                    text = entry.message,
+                    style = ReadingMono,
+                    color = if (entry.level == DebugLogLevel.ERROR) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                    maxLines = if (expanded) Int.MAX_VALUE else 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            Text(
-                text = entry.message,
-                style = ReadingMono,
-                color = if (entry.level == DebugLogLevel.ERROR) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                maxLines = if (expanded) Int.MAX_VALUE else 3,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

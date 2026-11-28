@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import io.github.gythialy.sporteditor.ui.theme.Signal
 
 /**
  * Gauge for the daily step budget: the base value the user configures and the deterministic
@@ -39,6 +40,7 @@ fun EffectiveLimitStrip(baseLabel: String, offsetLabel: String, fraction: Float,
     val track = MaterialTheme.colorScheme.outlineVariant
     val tick = MaterialTheme.colorScheme.outline
     val marker = MaterialTheme.colorScheme.primary
+    val wash = Signal.wash()
 
     Column(modifier = modifier) {
         Row(
@@ -68,6 +70,15 @@ fun EffectiveLimitStrip(baseLabel: String, offsetLabel: String, fraction: Float,
             val endX = size.width - 3.dp.toPx()
             val span = endX - startX
 
+            // Wash band first: 16% primary under the ticks. It is a surface treatment, not a
+            // progress fill, so it spans the whole random range and never follows the marker.
+            drawLine(
+                color = wash,
+                start = Offset(startX, centerY),
+                end = Offset(endX, centerY),
+                strokeWidth = 6.dp.toPx(),
+                cap = StrokeCap.Round
+            )
             drawLine(
                 color = track,
                 start = Offset(startX, centerY),

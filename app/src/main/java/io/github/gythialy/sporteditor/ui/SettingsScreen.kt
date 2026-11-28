@@ -1,9 +1,21 @@
 package io.github.gythialy.sporteditor.ui
 
 import android.os.Build
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -49,13 +62,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -67,12 +85,16 @@ import androidx.compose.ui.unit.dp
 import io.github.gythialy.sporteditor.BuildConfig
 import io.github.gythialy.sporteditor.R
 import io.github.gythialy.sporteditor.ui.theme.Dimensions
+import io.github.gythialy.sporteditor.ui.theme.Motion
+import io.github.gythialy.sporteditor.ui.theme.Signal
+import io.github.gythialy.sporteditor.ui.theme.animationsEnabled
 import io.github.gythialy.sporteditor.ui.theme.brandAccent
 import io.github.gythialy.sporteditor.ui.theme.cardBorderColor
 import io.github.gythialy.sporteditor.ui.theme.cardContainerColor
 import io.github.gythialy.sporteditor.ui.theme.cardShape
 import io.github.gythialy.sporteditor.ui.theme.contentInset
 import io.github.gythialy.sporteditor.ui.theme.windowWidthDp
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -93,6 +115,8 @@ fun SettingsScreen(
 ) {
     var showThemeDialog by rememberSaveable { mutableStateOf(false) }
     var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
+    // The intro is a one-shot: once it has run, re-composition and navigation must not replay it.
+    var groupsEntered by remember { mutableStateOf(false) }
 
     val sideInset = contentInset(windowWidthDp())
 
@@ -129,7 +153,11 @@ fun SettingsScreen(
         ) {
             item { SectionLabel(R.string.section_general) }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    index = 0,
+                    introPlayed = groupsEntered,
+                    onIntroPlayed = { groupsEntered = true }
+                ) {
                     SettingsRow(
                         icon = Icons.Filled.Language,
                         title = stringResource(R.string.language_title),
@@ -152,7 +180,8 @@ fun SettingsScreen(
                             title = stringResource(R.string.dynamic_color_title),
                             subtitle = stringResource(R.string.dynamic_color_desc),
                             checked = dynamicColor,
-                            onCheckedChange = onDynamicColorChange
+                            onCheckedChange = onDynamicColorChange,
+                            showSwatches = true
                         )
                     }
                     RowDivider()
@@ -180,7 +209,11 @@ fun SettingsScreen(
                 )
             }
             item {
-                SettingsGroup {
+                SettingsGroup(
+                    index = 1,
+                    introPlayed = groupsEntered,
+                    onIntroPlayed = { groupsEntered = true }
+                ) {
                     SettingsRow(
                         icon = Icons.AutoMirrored.Filled.OpenInNew,
                         title = stringResource(R.string.about_homepage),
@@ -241,17 +274,38 @@ private fun SectionLabel(labelRes: Int, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = cardShape(),
-        colors = CardDefaults.cardColors(
-            containerColor = cardContainerColor()
-        ),
-        border = BorderStroke(1.dp, cardBorderColor()),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(content = content)
+private fun SettingsGroup(index: Int, introPlayed: Boolean, onIntroPlayed: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val animations = animationsEnabled()
+    // Captured once so a later group state change cannot restart an already finished intro.
+    val animateEntry = remember { animations && !introPlayed }
+    var visible by remember { mutableStateOf(!animateEntry) }
+    LaunchedEffect(animateEntry) {
+        if (animateEntry) {
+            // A coroutine delay: the system duration scale does not reach it, so animations off
+            // has to skip it entirely rather than scaling it to zero.
+            delay(index * Motion.ENERGY_STAGGER_MS)
+            visible = true
+            onIntroPlayed()
+        }
+    }
+    val enter = if (animateEntry) {
+        fadeIn(animationSpec = Motion.enter()) +
+            slideInVertically(animationSpec = Motion.enter()) { it / 8 }
+    } else {
+        EnterTransition.None
+    }
+    AnimatedVisibility(visible = visible, enter = enter, exit = ExitTransition.None) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = cardShape(),
+            colors = CardDefaults.cardColors(
+                containerColor = cardContainerColor()
+            ),
+            border = BorderStroke(1.dp, cardBorderColor()),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(content = content)
+        }
     }
 }
 
@@ -295,7 +349,14 @@ private fun SettingsRow(icon: ImageVector, title: String, subtitle: String, onCl
 
 /** A settings row whose trailing control is a switch instead of a disclosure chevron. */
 @Composable
-private fun SettingsSwitchRow(icon: ImageVector, title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SettingsSwitchRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    showSwatches: Boolean = false
+) {
     ListItem(
         leadingContent = {
             Icon(
@@ -306,11 +367,14 @@ private fun SettingsSwitchRow(icon: ImageVector, title: String, subtitle: String
         },
         headlineContent = { Text(title) },
         supportingContent = {
-            Text(
-                text = subtitle,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = subtitle,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (showSwatches) PaletteSwatch()
+            }
         },
         trailingContent = {
             Switch(checked = checked, onCheckedChange = onCheckedChange)
@@ -319,6 +383,38 @@ private fun SettingsSwitchRow(icon: ImageVector, title: String, subtitle: String
         // The row is clickable as well: tapping the title toggles, the switch consumes its own tap.
         modifier = Modifier.clickable { onCheckedChange(!checked) }
     )
+}
+
+/** Three role dots: the scheme itself changes with the switch, so there is no second palette. */
+@Composable
+private fun PaletteSwatch() {
+    val animations = animationsEnabled()
+    val spec: FiniteAnimationSpec<Color> = if (animations) Motion.glide() else tween(durationMillis = 0)
+    val primary by animateColorAsState(
+        targetValue = MaterialTheme.colorScheme.primary,
+        animationSpec = spec,
+        label = "swatch-primary"
+    )
+    val secondary by animateColorAsState(
+        targetValue = MaterialTheme.colorScheme.secondary,
+        animationSpec = spec,
+        label = "swatch-secondary"
+    )
+    val tertiary by animateColorAsState(
+        targetValue = MaterialTheme.colorScheme.tertiary,
+        animationSpec = spec,
+        label = "swatch-tertiary"
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf(primary, secondary, tertiary).forEach { color ->
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+        }
+    }
 }
 
 /** Mutually exclusive update states; drives the marker and the trailing action of [UpdateRow]. */
@@ -343,6 +439,18 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
     val status = updateState.status()
     val update = updateState.update
     val checkingLabel = stringResource(R.string.update_checking)
+    val animations = animationsEnabled()
+    var previousStatus by remember { mutableStateOf(status) }
+    var pulseKey by remember { mutableIntStateOf(0) }
+    LaunchedEffect(status) {
+        // Only a completed check earns light; an error keeps its plain red icon.
+        if (animations && previousStatus == UpdateStatus.Checking &&
+            (status == UpdateStatus.UpToDate || status == UpdateStatus.Available)
+        ) {
+            pulseKey++
+        }
+        previousStatus = status
+    }
 
     ListItem(
         leadingContent = {
@@ -367,22 +475,24 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
                     overflow = TextOverflow.Ellipsis
                 )
                 when (status) {
-                    UpdateStatus.UpToDate -> Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = stringResource(R.string.update_up_to_date),
+                    UpdateStatus.UpToDate -> ResultMarker(
+                        icon = Icons.Filled.CheckCircle,
+                        description = stringResource(R.string.update_up_to_date),
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
+                        pulseKey = pulseKey,
+                        animations = animations
                     )
 
                     UpdateStatus.Available -> {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowCircleUp,
-                            contentDescription = stringResource(
+                        ResultMarker(
+                            icon = Icons.Filled.ArrowCircleUp,
+                            description = stringResource(
                                 R.string.update_available,
                                 update?.version.orEmpty()
                             ),
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
+                            pulseKey = pulseKey,
+                            animations = animations
                         )
                         if (update != null) {
                             Text(
@@ -441,6 +551,61 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
     )
+}
+
+/** Holds the result icon in a fixed frame so the halo has room without pushing the text. */
+@Composable
+private fun ResultMarker(
+    icon: ImageVector,
+    description: String,
+    tint: Color,
+    pulseKey: Int,
+    animations: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.size(22.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (animations && pulseKey > 0) SuccessHalo(pulseKey)
+        Icon(
+            imageVector = icon,
+            contentDescription = description,
+            tint = tint,
+            modifier = Modifier.size(14.dp)
+        )
+    }
+}
+
+/** One converging ring, then a static rest frame. No blur, no glow over the version text. */
+@Composable
+private fun SuccessHalo(pulseKey: Int) {
+    val convergence = remember { Animatable(0f) }
+    val opacity = remember { Animatable(0f) }
+    LaunchedEffect(pulseKey) {
+        convergence.snapTo(0f)
+        opacity.snapTo(1f)
+        convergence.animateTo(1f, animationSpec = Motion.pulse())
+        delay(Motion.PULSE_DECAY_MS)
+        opacity.animateTo(0f, animationSpec = Motion.pulse())
+    }
+    val halo = Signal.halo()
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val alpha = opacity.value
+        if (alpha <= 0f) return@Canvas
+        val outer = size.minDimension / 2f - 1.dp.toPx()
+        val radius = outer * (1f - 0.35f * convergence.value)
+        drawCircle(
+            color = halo.copy(alpha = halo.alpha * alpha),
+            radius = radius,
+            style = Stroke(width = 1.5.dp.toPx())
+        )
+        drawCircle(
+            color = halo.copy(alpha = halo.alpha * alpha * 0.45f),
+            radius = radius * 0.72f,
+            style = Stroke(width = 1.dp.toPx())
+        )
+    }
 }
 
 @Composable
