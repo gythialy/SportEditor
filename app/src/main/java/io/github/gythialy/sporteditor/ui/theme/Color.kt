@@ -3,7 +3,7 @@ package io.github.gythialy.sporteditor.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Fallback palette used when the device does not support dynamic color (Android < 12).
-// Mirrors the tokens documented in design/ui-redesign/README.md.
+// Mirrors the fallback palette documented in docs/design/README.md.
 
 val GreenPrimary = Color(0xFF006C4C)
 val GreenPrimaryContainer = Color(0xFFCFF2E1)
@@ -19,6 +19,7 @@ val LightOnSurface = Color(0xFF1A1C1B)
 val LightOnSurfaceVariant = Color(0xFF5B6B60)
 val LightOutline = Color(0xFFB6C2BA)
 val LightOutlineVariant = Color(0xFFDDE7E0)
+val LightCardRule = Color(0xFF7C8A80)
 val LightError = Color(0xFFBA1A1A)
 val LightErrorContainer = Color(0xFFFFDAD6)
 val LightOnErrorContainer = Color(0xFF410002)

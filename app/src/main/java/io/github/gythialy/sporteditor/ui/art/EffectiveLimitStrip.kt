@@ -54,7 +54,7 @@ fun EffectiveLimitStrip(baseLabel: String, offsetLabel: String, fraction: Float,
             Text(
                 text = offsetLabel,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Canvas(

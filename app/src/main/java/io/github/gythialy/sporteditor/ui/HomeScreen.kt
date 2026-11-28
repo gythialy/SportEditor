@@ -12,8 +12,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -72,10 +74,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonSize
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -93,12 +97,13 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -122,6 +127,7 @@ import io.github.gythialy.sporteditor.ui.theme.Motion
 import io.github.gythialy.sporteditor.ui.theme.alertWash
 import io.github.gythialy.sporteditor.ui.theme.animationsEnabled
 import io.github.gythialy.sporteditor.ui.theme.brandAccent
+import io.github.gythialy.sporteditor.ui.theme.cardBorderColor
 import io.github.gythialy.sporteditor.ui.theme.cardContainerColor
 import io.github.gythialy.sporteditor.ui.theme.cardShape
 import io.github.gythialy.sporteditor.ui.theme.contentInset
@@ -281,6 +287,9 @@ private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpe
     val label = stringResource(
         if (connected) R.string.status_badge_connected else R.string.status_badge_disconnected
     )
+    val detailLabel = stringResource(
+        if (connected) R.string.action_view_connection else R.string.action_view_steps
+    )
     // At 320 dp the app-bar title and this control were left about 18 dp between them; the dot
     // alone still carries the state, and the full label stays available to TalkBack.
     val compact = windowWidthDp() < 360.dp
@@ -289,15 +298,15 @@ private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpe
         SplitButtonLayout(
             leadingButton = {
                 SplitButtonDefaults.LeadingButton(
-                    // The connection steps are a first-run hint, so the left half only opens them
-                    // while the framework has not connected. Once it has, the half is a plain
-                    // status indicator: tapping it does nothing and TalkBack reads the label
-                    // instead of promising a page that no longer exists.
-                    onClick = { if (!connected) onClick() },
-                    modifier = when {
-                        connected -> Modifier.clearAndSetSemantics { contentDescription = label }
-                        compact -> Modifier.semantics { contentDescription = label }
-                        else -> Modifier
+                    // The sheet carries both the first-run steps and the live framework details,
+                    // so the leading half stays actionable in both states. Only its label changes.
+                    onClick = onClick,
+                    modifier = Modifier.semantics {
+                        if (compact) contentDescription = label
+                        onClick(label = detailLabel) {
+                            onClick()
+                            true
+                        }
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = container,
@@ -312,7 +321,11 @@ private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpe
                     )
                     if (!compact) {
                         Spacer(Modifier.width(6.dp))
-                        Text(text = label, style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
+                        )
                     }
                 }
             },
@@ -505,7 +518,7 @@ private fun AppCard(
             containerColor = cardContainerColor(),
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(1.dp, cardBorderColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
@@ -532,30 +545,26 @@ private fun AppCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (summary != null || !iconState.installed) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            if (summary != null) {
-                                Text(
-                                    text = summary,
-                                    // The "not installed" badge is measured first, so a long
-                                    // summary is ellipsized instead of pushing the badge out.
-                                    modifier = Modifier.weight(1f, fill = false),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            if (!iconState.installed) {
-                                Text(
-                                    text = stringResource(R.string.app_not_installed),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = summary,
+                            // The "not installed" badge is measured first, so a long
+                            // summary is ellipsized instead of pushing the badge out.
+                            modifier = Modifier.weight(1f, fill = false),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (!iconState.installed) {
+                            Text(
+                                text = stringResource(R.string.app_not_installed),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -665,12 +674,11 @@ private fun AppCard(
 }
 
 /**
- * What the card says under the app name, or null when there is nothing to add: an off switch
- * already says "off", so repeating it here was noise.
+ * What the card says under the app name. The rule stays visible when the switch is off — the
+ * switch already says "off", while the rule is what the user came to check.
  */
 @Composable
-private fun summaryText(settings: TargetSettings, value: Int): String? {
-    if (!settings.enabled) return null
+private fun summaryText(settings: TargetSettings, value: Int): String {
     val formatted = formatNumber(value)
     return when (settings.mode) {
         StepMode.MULTIPLY -> stringResource(R.string.app_summary_multiply, formatted)
@@ -745,6 +753,7 @@ private fun ModeSelector(
                     ToggleButton(
                         checked = item == mode,
                         onCheckedChange = { onModeChange(item) },
+                        buttonSize = ToggleButtonSize.Medium,
                         shapes = shapes,
                         contentPadding = PaddingValues(horizontal = 4.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -933,7 +942,8 @@ private fun StepEditor(
                 FilterChip(
                     selected = settings.value == preset,
                     onClick = { applyValue(preset) },
-                    label = { Text(presetLabel(settings.mode, preset)) }
+                    label = { Text(presetLabel(settings.mode, preset)) },
+                    modifier = Modifier.heightIn(min = 48.dp)
                 )
             }
         }
@@ -962,7 +972,9 @@ private fun StepEditor(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun StepButton(symbol: String, description: String, enabled: Boolean, onStep: () -> Unit) {
-    var pressed by remember { mutableStateOf(false) }
+    val enabledState = stringResource(if (enabled) R.string.state_enabled else R.string.state_disabled)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
     val latestStep by rememberUpdatedState(onStep)
 
     // Single tap steps once; holding the button keeps stepping after a short delay.
@@ -977,13 +989,15 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
         }
     }
 
+    // Neutral surface, not primaryContainer: the Pine Quota reserves the accent for the selected
+    // mode, the current readout and the limit marker. Enabled/disabled still differ in tone.
     val container = if (enabled) {
-        MaterialTheme.colorScheme.primaryContainer
+        MaterialTheme.colorScheme.surfaceContainerHighest
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
     val content = if (enabled) {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        MaterialTheme.colorScheme.onSurface
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -1004,23 +1018,16 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
         shape = shape,
         modifier = Modifier
             .size(56.dp)
+            .clickable(
+                enabled = enabled,
+                onClickLabel = description,
+                role = Role.Button,
+                interactionSource = interactionSource,
+                indication = ripple()
+            ) { onStep() }
             .semantics {
                 contentDescription = description
-                role = Role.Button
-                onClick(label = description) {
-                    if (enabled) onStep()
-                    enabled
-                }
-            }
-            .pointerInput(enabled) {
-                detectTapGestures(
-                    onPress = {
-                        if (!enabled) return@detectTapGestures
-                        pressed = true
-                        tryAwaitRelease()
-                        pressed = false
-                    }
-                )
+                stateDescription = enabledState
             }
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -1032,6 +1039,8 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
 @Composable
 private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onDraftMaxStepsChange: (Int?) -> Unit, onMaxStepsChange: (Int) -> Unit) {
     var expanded by rememberSaveable { mutableStateOf(false) }
+    val expandedState = stringResource(R.string.state_expanded)
+    val collapsedState = stringResource(R.string.state_collapsed)
 
     Column {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1039,7 +1048,12 @@ private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onDraftMaxStepsC
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { expanded = !expanded }
-                .padding(vertical = 12.dp),
+                .padding(vertical = 12.dp)
+                .heightIn(min = 48.dp)
+                .semantics {
+                    role = Role.Button
+                    stateDescription = if (expanded) expandedState else collapsedState
+                },
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -1050,7 +1064,7 @@ private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onDraftMaxStepsC
             Text(
                 text = formatNumber(effectiveLimit) + " " + stringResource(R.string.unit_steps),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary
+                color = MaterialTheme.colorScheme.onSurface
             )
             // One arrow that turns, instead of swapping glyphs: the rotation carries "this opened"
             // and costs no layout change.
@@ -1062,7 +1076,7 @@ private fun MaxStepsSection(maxSteps: Int, effectiveLimit: Int, onDraftMaxStepsC
             Icon(
                 imageVector = Icons.Filled.KeyboardArrowDown,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(20.dp)
                     .rotate(arrowRotation)

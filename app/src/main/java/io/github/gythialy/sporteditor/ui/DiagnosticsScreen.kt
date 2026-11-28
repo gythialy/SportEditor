@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -72,6 +73,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -94,6 +96,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -119,6 +125,7 @@ import io.github.gythialy.sporteditor.ui.theme.Motion
 import io.github.gythialy.sporteditor.ui.theme.ReadingMono
 import io.github.gythialy.sporteditor.ui.theme.ReadingMonoLabel
 import io.github.gythialy.sporteditor.ui.theme.animationsEnabled
+import io.github.gythialy.sporteditor.ui.theme.cardBorderColor
 import io.github.gythialy.sporteditor.ui.theme.cardContainerColor
 import io.github.gythialy.sporteditor.ui.theme.contentInset
 import io.github.gythialy.sporteditor.ui.theme.windowWidthDp
@@ -156,6 +163,7 @@ fun DiagnosticsScreen(
     var query by rememberSaveable { mutableStateOf("") }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var levelMenuOpen by remember { mutableStateOf(false) }
+    var showClearDialog by rememberSaveable { mutableStateOf(false) }
 
     val filtered = DebugLogFilter.apply(entries, selectedTypes, query)
     val sideInset = contentInset(windowWidthDp())
@@ -168,14 +176,34 @@ fun DiagnosticsScreen(
         clipboard.setText(AnnotatedString(buildReport(state, filtered)))
         scope.launch { snackbarHostState.showSnackbar(copiedMessage) }
     }
+    val shareFailedMessage = stringResource(R.string.debug_share_failed)
+    val truncationNote = stringResource(R.string.debug_report_truncated, SHARE_ENTRY_LIMIT)
+    val shareReadyMessage = stringResource(R.string.debug_share_ready)
     val shareReport: () -> Unit = {
+        val visible = filtered.takeLast(SHARE_ENTRY_LIMIT)
+        val truncated = visible.size < filtered.size
+        val report = buildReport(
+            state,
+            visible,
+            filterNote = reportFilterNote(selectedTypes, query, filtered.size),
+            truncationNote = if (truncated) truncationNote else null
+        )
         val send = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, buildReport(state, filtered))
+            putExtra(Intent.EXTRA_TEXT, report)
         }
-        context.startActivity(Intent.createChooser(send, null))
+        val result = runCatching { context.startActivity(Intent.createChooser(send, null)) }
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                if (result.isSuccess) shareReadyMessage else shareFailedMessage
+            )
+        }
+    }
+    val clearAllWithConfirmation: () -> Unit = {
+        showClearDialog = true
     }
     val clearReport: () -> Unit = {
+        showClearDialog = false
         store.clear()
         scope.launch { snackbarHostState.showSnackbar(clearedMessage) }
     }
@@ -233,7 +261,11 @@ fun DiagnosticsScreen(
                             selected = selectedTypes,
                             query = query,
                             timeFormat = timeFormat,
-                            onSelectedChange = { types -> selectedRaw = types.joinToString(",") { it.name } }
+                            onSelectedChange = { types -> selectedRaw = types.joinToString(",") { it.name } },
+                            onClearFilter = {
+                                selectedRaw = ""
+                                query = ""
+                            }
                         )
 
                         DiagnosticsTab.ENVIRONMENT -> EnvironmentPage(state = state, entriesSize = entries.size)
@@ -267,7 +299,7 @@ fun DiagnosticsScreen(
                                 contentDescription = stringResource(R.string.debug_share)
                             )
                         }
-                        IconButton(onClick = clearReport) {
+                        IconButton(onClick = clearAllWithConfirmation) {
                             Icon(
                                 imageVector = Icons.Filled.DeleteSweep,
                                 contentDescription = stringResource(R.string.debug_clear)
@@ -276,6 +308,24 @@ fun DiagnosticsScreen(
                     }
                 )
             }
+        }
+
+        if (showClearDialog) {
+            AlertDialog(
+                onDismissRequest = { showClearDialog = false },
+                title = { Text(stringResource(R.string.debug_clear_confirm_title)) },
+                text = { Text(stringResource(R.string.debug_clear_confirm_text, entries.size)) },
+                confirmButton = {
+                    TextButton(onClick = clearReport) {
+                        Text(stringResource(R.string.debug_clear_confirm_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showClearDialog = false }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                }
+            )
         }
     }
 }
@@ -346,14 +396,14 @@ private fun DiagnosticsTopBar(
                         .focusRequester(focusRequester)
                 )
                 if (query.isNotEmpty()) {
-                    Icon(
-                        imageVector = Icons.Filled.Close,
-                        contentDescription = stringResource(R.string.debug_clear_search),
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clickable { onQuery("") },
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    IconButton(onClick = { onQuery("") }, modifier = Modifier.size(48.dp)) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.debug_clear_search),
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -485,7 +535,8 @@ private fun LogsPage(
     selected: Set<DebugLogType>,
     query: String,
     timeFormat: SimpleDateFormat,
-    onSelectedChange: (Set<DebugLogType>) -> Unit
+    onSelectedChange: (Set<DebugLogType>) -> Unit,
+    onClearFilter: () -> Unit
 ) {
     // Stable list keys for the insertion/placement animation. Entries are data classes without an
     // id and two identical lines can share the same millisecond, so identity — not equality, not
@@ -511,6 +562,25 @@ private fun LogsPage(
                 style = MaterialTheme.typography.bodySmall.withTabularNumerals(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        if (selected.isNotEmpty() || query.isNotBlank()) {
+            item {
+                val parts = selected.map { typeLabelText(it) }.toMutableList()
+                if (query.isNotBlank()) parts.add(query.trim())
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = stringResource(R.string.debug_filter_active, parts.joinToString(" · ")),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    TextButton(onClick = onClearFilter) {
+                        Text(stringResource(R.string.debug_filter_clear))
+                    }
+                }
+            }
         }
 
         item {
@@ -619,14 +689,22 @@ private fun LogsPage(
 
 @Composable
 private fun TypeChip(label: String, count: Int, selected: Boolean, modifier: Modifier = Modifier, onSelected: () -> Unit) {
+    val filterState = stringResource(
+        if (selected) R.string.state_filtered else R.string.state_not_filtered
+    )
     Surface(
         shape = AppShapes.pill,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
         border = BorderStroke(
             width = 1.dp,
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+            color = if (selected) MaterialTheme.colorScheme.primary else cardBorderColor()
         ),
-        modifier = modifier.clickable(onClick = onSelected)
+        modifier = modifier
+            .clickable(onClick = onSelected)
+            .semantics {
+                role = Role.Button
+                stateDescription = filterState
+            }
     ) {
         Text(
             text = "$label $count",
@@ -642,6 +720,8 @@ private fun TypeChip(label: String, count: Int, selected: Boolean, modifier: Mod
 @Composable
 private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier: Modifier = Modifier) {
     var expanded by rememberSaveable(entry.time, entry.source, entry.message) { mutableStateOf(false) }
+    val expandedState = stringResource(R.string.state_expanded)
+    val collapsedState = stringResource(R.string.state_collapsed)
 
     Card(
         shape = AppShapes.logRow,
@@ -650,6 +730,10 @@ private fun LogCard(entry: DebugLogEntry, timeFormat: SimpleDateFormat, modifier
         modifier = modifier
             .fillMaxWidth()
             .clickable { expanded = !expanded }
+            .semantics {
+                role = Role.Button
+                stateDescription = if (expanded) expandedState else collapsedState
+            }
             .animateContentSize()
     ) {
         Column(
@@ -1222,7 +1306,21 @@ private fun modeSummary(settings: TargetSettings): String { // 与首页一致�
 
 // ------------------------------ 报告 ------------------------------
 
-private fun buildReport(state: SettingsState, entries: List<DebugLogEntry>): String = buildString {
+private const val SHARE_ENTRY_LIMIT = 100
+
+/** A report is always self-describing: a reader must see what was filtered out. */
+private fun reportFilterNote(types: Set<DebugLogType>, query: String, shown: Int): String {
+    val typePart = if (types.isEmpty()) "types=all" else "types=" + types.joinToString("+") { it.name }
+    val queryPart = if (query.isBlank()) "" else " query=" + query.trim()
+    return "$typePart$queryPart shown=$shown"
+}
+
+private fun buildReport(
+    state: SettingsState,
+    entries: List<DebugLogEntry>,
+    filterNote: String? = null,
+    truncationNote: String? = null
+): String = buildString {
     appendLine("Sport Editor diagnostics")
     appendLine("app=" + BuildConfig.VERSION_NAME + " debug=" + BuildConfig.DEBUG)
     appendLine("android=" + Build.VERSION.RELEASE + " api=" + Build.VERSION.SDK_INT)
@@ -1233,6 +1331,8 @@ private fun buildReport(state: SettingsState, entries: List<DebugLogEntry>): Str
     )
     appendLine("connected=" + state.connected)
     appendLine("capture_level=" + state.captureLevel.name)
+    if (filterNote != null) appendLine("filter=$filterNote")
+    if (truncationNote != null) appendLine("note=$truncationNote")
     appendLine()
     AppTarget.entries.forEach { target ->
         val settings = state.settingsFor(target)

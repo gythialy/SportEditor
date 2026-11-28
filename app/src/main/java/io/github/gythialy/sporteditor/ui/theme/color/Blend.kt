@@ -44,7 +44,7 @@ object Blend {
     /** 1 when [to] lies clockwise of [from] within 180 degrees, -1 otherwise. */
     fun rotationDirection(from: Double, to: Double): Int {
         val delta = sanitizeDegrees(to - from)
-        return if (delta < 180.0) 1 else -1
+        return if (delta <= 180.0) 1 else -1
     }
 
     /** Normalises an angle to 0..360. */

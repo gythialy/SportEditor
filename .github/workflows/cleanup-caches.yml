@@ -1,0 +1,26 @@
+name: cleanup caches by a branch
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      BRANCH: refs/pull/${{ github.event.pull_request.number }}/merge
+    steps:
+      - name: Cleanup
+        run: |
+          gh extension install actions/gh-actions-cache || true
+          set +e
+          gh actions-cache list -R "$REPO" -B "$BRANCH" | cut -f1 | while read -r key; do
+            gh actions-cache delete "$key" -R "$REPO" -B "$BRANCH" --confirm
+          done
