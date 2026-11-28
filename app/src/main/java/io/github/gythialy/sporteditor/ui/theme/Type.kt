@@ -8,8 +8,8 @@ import androidx.compose.ui.unit.sp
 /**
  * Material 3 defaults; kept as a single extension point for future typography tweaks.
  *
- * The DESIGN.md type scale (24/22/16/14/12/11 with matching line heights) is the M3 token scale, so
- * the defaults already are the spec — nothing is restated here on purpose.
+ * The type scale documented in docs/design/README.md is the M3 baseline, so the defaults already
+ * are the spec — nothing is restated here on purpose.
  */
 val SportEditorTypography = Typography()
 

@@ -14,9 +14,14 @@
     <string name="status_disconnected_hint_short">Enable in LSPosed, then restart</string>
     <string name="state_expanded">Expanded</string>
     <string name="state_collapsed">Collapsed</string>
+    <string name="state_enabled">Enabled</string>
+    <string name="state_disabled">Disabled</string>
+    <string name="state_filtered">Filtered</string>
+    <string name="state_not_filtered">Not filtered</string>
     <string name="status_not_synced">Settings stay on this device until the service connects.</string>
     <string name="status_sheet_title">Connection</string>
     <string name="action_view_steps">View steps</string>
+    <string name="action_view_connection">View connection details</string>
 
     <string name="action_more">More</string>
     <string name="action_reset">Reset</string>
@@ -106,6 +111,11 @@
     <string name="debug_filter_uninstalled">Not installed</string>
     <string name="debug_apps_summary">Enabled %1$d/%2$d · Installed %3$d</string>
     <string name="debug_search_matches">%1$d of %2$d</string>
+    <string name="debug_filter_active">Filtered: %1$s</string>
+    <string name="debug_filter_clear">Clear filter</string>
+    <string name="debug_share_ready">Diagnostics report ready</string>
+    <string name="debug_share_failed">Could not share diagnostics</string>
+    <string name="debug_report_truncated">Last %1$d entries only</string>
     <string name="debug_stats">Stats</string>
     <string name="debug_env_connected_desc">Connected; settings and logs sync in real time.</string>
     <string name="debug_env_disconnected_desc">Not connected; settings cached locally.</string>
@@ -115,6 +125,9 @@
     <string name="debug_copy">Copy</string>
     <string name="debug_share">Share</string>
     <string name="debug_clear">Clear</string>
+    <string name="debug_clear_confirm_title">Clear all logs?</string>
+    <string name="debug_clear_confirm_text">This clears all %1$d entries, including those outside the current filter. This cannot be undone.</string>
+    <string name="debug_clear_confirm_action">Clear all</string>
     <string name="debug_copied">Copied</string>
     <string name="debug_cleared">Cleared</string>
     <string name="debug_empty">No logs yet. Restart a target app or change a setting.</string>

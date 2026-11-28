@@ -94,6 +94,17 @@ fun alertWash(): Color {
 private const val ALERT_WASH_ALPHA = 0.12f
 
 /**
+ * Card edge that replaces the shadow as the depth cue. `outlineVariant` is only ~1.2:1 against the
+ * card surface, so the rule uses a dedicated 3:1+ tone: a muted ink in light, `outline` in dark.
+ */
+@Composable
+fun cardBorderColor(): Color {
+    val scheme = MaterialTheme.colorScheme
+    // Match the same luminance test cardContainerColor() uses, so the two never disagree.
+    return if (scheme.background.luminance() < 0.5f) scheme.outline else LightCardRule
+}
+
+/**
  * Card surface that keeps the page/card hierarchy in both themes: white cards on the tinted
  * page in light mode, raised tonal containers in dark mode.
  */

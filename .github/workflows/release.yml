@@ -17,7 +17,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       # Fail fast when the tag and the app version disagree: the module repository compares
       # versionCode, so a stale or mismatched tag would publish an APK users cannot update to.
@@ -40,19 +40,19 @@ jobs:
           echo "name=${version_name}" >> "$GITHUB_OUTPUT"
           echo "module_tag=${version_code}-${version_name}" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
           java-version: "21"
 
-      - uses: android-actions/setup-android@v4
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd  # v4.0.4
 
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager --install "platforms;android-37.1" "build-tools;37.0.0"
 
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c  # v6.4.1
 
       - name: Decode release keystore
         env:
@@ -84,7 +84,7 @@ jobs:
           APKSIGNER="$SDK_ROOT/build-tools/37.0.0/apksigner"
           "$APKSIGNER" verify --print-certs "dist/SportEditor-${GITHUB_REF_NAME}.apk"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: release-apk
           path: dist/*.apk
@@ -108,7 +108,7 @@ jobs:
 
       - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3  # v3.0.4
         with:
           files: dist/*.apk
           body_path: release-body.md

@@ -27,5 +27,4 @@
 /dist/
 /release-body.md
 
-# Rendered design previews stay local; the mockup itself is the committed artifact.
-/design/ui-expressive/*.png
+.alma-snapshots

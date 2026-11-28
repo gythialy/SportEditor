@@ -6,8 +6,6 @@ import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalView
 
 /**
  * The app's motion vocabulary. Four roles cover every animation in the app, so call sites name an
@@ -77,6 +75,7 @@ object Motion {
  */
 @Composable
 fun animationsEnabled(): Boolean {
-    val view = LocalView.current
-    return remember(view) { ValueAnimator.areAnimatorsEnabled() }
+    // Read on every composition: caching this by view made a runtime "Remove animations" toggle
+    // invisible until the process restarted, while Compose's own duration scale already follows it.
+    return ValueAnimator.areAnimatorsEnabled()
 }

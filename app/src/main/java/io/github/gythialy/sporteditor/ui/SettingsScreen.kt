@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,7 +58,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -65,6 +68,7 @@ import io.github.gythialy.sporteditor.BuildConfig
 import io.github.gythialy.sporteditor.R
 import io.github.gythialy.sporteditor.ui.theme.Dimensions
 import io.github.gythialy.sporteditor.ui.theme.brandAccent
+import io.github.gythialy.sporteditor.ui.theme.cardBorderColor
 import io.github.gythialy.sporteditor.ui.theme.cardContainerColor
 import io.github.gythialy.sporteditor.ui.theme.cardShape
 import io.github.gythialy.sporteditor.ui.theme.contentInset
@@ -244,7 +248,7 @@ private fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = cardContainerColor()
         ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(1.dp, cardBorderColor()),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(content = content)
@@ -354,7 +358,8 @@ private fun UpdateRow(updateState: UpdateUiState, onCheckUpdate: () -> Unit, onO
         supportingContent = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
             ) {
                 Text(
                     text = stringResource(R.string.update_current, BuildConfig.VERSION_NAME),
@@ -457,7 +462,8 @@ private fun <T> ChoiceDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onSelect(option) }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 8.dp)
+                            .heightIn(min = 48.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(

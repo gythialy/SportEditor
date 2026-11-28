@@ -28,7 +28,7 @@ val SportEditorShapes = Shapes(
 )
 
 /**
- * The shape exceptions DESIGN.md allows, plus the pill. They live in one object so they cannot
+ * The shape exceptions docs/design/README.md allows, plus the pill. They live in one object so they cannot
  * spread: the log row is 14 dp, the level tag 7 dp and the tab indicator 2 dp because their own
  * heights make the rounded steps of the main scale read as wrong.
  */

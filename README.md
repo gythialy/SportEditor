@@ -68,6 +68,7 @@
 | --- | --- |
 | [开发文档](docs/development.md) | 架构原理、目录结构、构建环境、测试与 CI/CD |
 | [模拟器测试](docs/emulator-test.md) | root AVD + Magisk + Vector 的端到端验证环境 |
+| [设计系统（实现态）](docs/design/README.md) | 当前落地的色彩、字阶、形状、动效、布局与组件规格 |
 | [发布与签名](docs/release.md) | 本地签名、GitHub Secrets 与发布流程 |
 
 ## 许可证

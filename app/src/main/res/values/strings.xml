@@ -14,9 +14,14 @@
     <string name="status_disconnected_hint_short">在 LSPosed 中启用并重启本应用</string>
     <string name="state_expanded">已展开</string>
     <string name="state_collapsed">已收起</string>
+    <string name="state_enabled">已启用</string>
+    <string name="state_disabled">已关闭</string>
+    <string name="state_filtered">已筛选</string>
+    <string name="state_not_filtered">未筛选</string>
     <string name="status_not_synced">设置暂存本机，连接后自动同步。</string>
     <string name="status_sheet_title">连接状态</string>
     <string name="action_view_steps">查看步骤</string>
+    <string name="action_view_connection">查看连接详情</string>
 
     <string name="action_more">更多</string>
     <string name="action_reset">重置</string>
@@ -106,6 +111,11 @@
     <string name="debug_filter_uninstalled">未安装</string>
     <string name="debug_apps_summary">启用 %1$d/%2$d · 安装 %3$d</string>
     <string name="debug_search_matches">命中 %1$d / %2$d</string>
+    <string name="debug_filter_active">筛选中：%1$s</string>
+    <string name="debug_filter_clear">清除筛选</string>
+    <string name="debug_share_ready">诊断报告已准备好</string>
+    <string name="debug_share_failed">无法分享诊断报告</string>
+    <string name="debug_report_truncated">仅包含最近 %1$d 条日志</string>
     <string name="debug_stats">统计</string>
     <string name="debug_env_connected_desc">已连接，设置与日志实时同步。</string>
     <string name="debug_env_disconnected_desc">未连接，设置暂存本机。</string>
@@ -115,6 +125,9 @@
     <string name="debug_copy">复制</string>
     <string name="debug_share">分享</string>
     <string name="debug_clear">清空</string>
+    <string name="debug_clear_confirm_title">清空全部日志？</string>
+    <string name="debug_clear_confirm_text">将清空全部 %1$d 条，包括当前筛选之外的记录。此操作不可撤销。</string>
+    <string name="debug_clear_confirm_action">清空全部</string>
     <string name="debug_copied">已复制</string>
     <string name="debug_cleared">已清空</string>
     <string name="debug_empty">暂无日志；重启目标应用或改一次设置即可产生。</string>
