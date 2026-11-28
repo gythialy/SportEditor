@@ -3,6 +3,8 @@ package io.github.gythialy.sporteditor.ui.theme
 import android.animation.ValueAnimator
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -15,6 +17,8 @@ import androidx.compose.runtime.Composable
  *  - [settle] — a readout finding its resting place (the step number counting to its new value).
  *  - [enter] — content arriving or reshaping (card expansion, log rows, screen transitions in).
  *  - [leave] — content going away; exits run faster so they never hold the next state back.
+ *  - [glide] — a selected indicator travelling between positions (mode segment, tab signal head).
+ *  - [pulse] — one-shot energy travelling along a live connection, then decaying to a still frame.
  *
  * [settle] and [enter] read the theme's [androidx.compose.material3.MotionScheme]: the expressive
  * *effects* spring for readouts (critically damped, so a number never overshoots) and the
@@ -22,10 +26,10 @@ import androidx.compose.runtime.Composable
  * a composable read, so these two are `@Composable` and must be captured outside coroutine blocks
  * (`LaunchedEffect`, `transitionSpec`).
  *
- * [press] and [leave] own their timing (100 ms and 150 ms tweens) because their durations are the
- * point, not a physical response: a touch acknowledgement has to be over before the next input, and
- * an exit has to finish before the next state arrives. They stay plain values so they also work
- * inside non-composable lambdas.
+ * [press], [leave] and [pulse] own their timing (100 ms, 150 ms and 520 ms tweens) because their
+ * durations are the point, not a physical response: a touch acknowledgement has to be over before
+ * the next input, an exit has to finish before the next state arrives, and a pulse has to decay to
+ * a readable still frame. They stay plain values so they also work inside non-composable lambdas.
  */
 object Motion {
 
@@ -56,13 +60,32 @@ object Motion {
     fun <T> leave(): FiniteAnimationSpec<T> = tween(durationMillis = 150, easing = Accelerate)
 
     /**
-     * Delay before a card expands after its switch flipped, so the switch thumb leads and the
-     * layout follows instead of both competing for the same frame.
+     * A selected indicator travelling between positions. No bounce: an indicator that overshoots
+     * reads as undecided. Stiffer than [enter] because the user's finger is already there.
      */
+    fun <T> glide(): FiniteAnimationSpec<T> = spring(
+        dampingRatio = Spring.DampingRatioNoBouncy,
+        stiffness = Spring.StiffnessMedium
+    )
+
+    /** One-shot energy travelling along a live connection, then decaying to a still frame. */
+    fun <T> pulse(): FiniteAnimationSpec<T> = tween(durationMillis = 520, easing = Standard)
+
+    /** Delay before a card expands after its switch flipped, so the switch thumb leads and the
+     * layout follows instead of both competing for the same frame. */
     const val SWITCH_LEAD_MS = 80L
 
     /** Per-row delay when a card builds itself up; the caller caps the row count. */
     const val STAGGER_STEP_MS = 60L
+
+    /** Per-card delay of the Live Circuit entry chain. Four cards finish within 210 ms. */
+    const val ENERGY_STAGGER_MS = 70L
+
+    /** How long a value-commit pulse stays visible before it decays to the static rail. */
+    const val PULSE_DECAY_MS = 900L
+
+    /** Period of the connected-state beacon. Only the beacon may loop. */
+    const val BEACON_CYCLE_MS = 2400L
 }
 
 /**

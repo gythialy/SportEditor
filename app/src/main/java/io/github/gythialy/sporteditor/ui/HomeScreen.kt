@@ -120,10 +120,12 @@ import io.github.gythialy.sporteditor.data.DailyLimit
 import io.github.gythialy.sporteditor.data.SettingsState
 import io.github.gythialy.sporteditor.data.StepMode
 import io.github.gythialy.sporteditor.data.TargetSettings
+import io.github.gythialy.sporteditor.ui.art.ConnectionMap
 import io.github.gythialy.sporteditor.ui.art.EffectiveLimitStrip
 import io.github.gythialy.sporteditor.ui.art.LinkBrokenArt
 import io.github.gythialy.sporteditor.ui.theme.Dimensions
 import io.github.gythialy.sporteditor.ui.theme.Motion
+import io.github.gythialy.sporteditor.ui.theme.Signal
 import io.github.gythialy.sporteditor.ui.theme.alertWash
 import io.github.gythialy.sporteditor.ui.theme.animationsEnabled
 import io.github.gythialy.sporteditor.ui.theme.brandAccent
@@ -206,6 +208,7 @@ fun HomeScreen(
                     // menu carries both follow-up destinations, so the settings gear is gone.
                     ConnectionSplitButton(
                         connected = state.connected,
+                        enabledCount = enabledCount,
                         onClick = { showConnectionSheet = true },
                         onOpenSettings = onOpenSettings
                     )
@@ -271,7 +274,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpenSettings: () -> Unit) {
+private fun ConnectionSplitButton(connected: Boolean, enabledCount: Int, onClick: () -> Unit, onOpenSettings: () -> Unit) {
     val container = if (connected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -282,8 +285,6 @@ private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpe
     } else {
         MaterialTheme.colorScheme.error
     }
-    // Brand anchor: the one place the app's own green stays visible under dynamic colour.
-    val dot = if (connected) brandAccent() else MaterialTheme.colorScheme.error
     val label = stringResource(
         if (connected) R.string.status_badge_connected else R.string.status_badge_disconnected
     )
@@ -313,11 +314,11 @@ private fun ConnectionSplitButton(connected: Boolean, onClick: () -> Unit, onOpe
                         contentColor = content
                     )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(dot)
+                    ConnectionMap(
+                        connected = connected,
+                        enabledCount = enabledCount,
+                        compact = compact,
+                        modifier = Modifier.size(32.dp)
                     )
                     if (!compact) {
                         Spacer(Modifier.width(6.dp))
@@ -506,138 +507,167 @@ private fun AppCard(
         if (draftMaxSteps != null && draftMaxSteps != settings.maxSteps) draftMaxSteps = null
     }
 
-    Card(
-        onClick = { onExpandChange(!expanded) },
-        modifier = Modifier
-            .fillMaxWidth()
-            .semantics {
-                stateDescription = if (expanded) expandedState else collapsedState
-            },
-        shape = cardShape(),
-        colors = CardDefaults.cardColors(
-            containerColor = cardContainerColor(),
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
-        border = BorderStroke(1.dp, cardBorderColor()),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                AppIcon(
-                    target = target,
-                    state = iconState,
-                    contentAlpha = if (settings.enabled) 1f else 0.72f
-                )
+    // A commit lights the rail once, then it settles to a static low-alpha line. The rail is a
+    // state signal, not decoration, so it only exists for enabled cards and never for errors.
+    var lit by remember { mutableStateOf(false) }
+    val railAlpha by animateFloatAsState(
+        targetValue = if (lit) 1f else 0.35f,
+        animationSpec = Motion.pulse(),
+        label = "card-rail"
+    )
+    LaunchedEffect(settings.value, settings.mode) {
+        if (settings.enabled) {
+            lit = true
+            delay(Motion.PULSE_DECAY_MS)
+            lit = false
+        }
+    }
 
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+    Box {
+        if (settings.enabled) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 1.dp)
+                    .padding(vertical = 12.dp)
+                    .size(width = 3.dp, height = 48.dp)
+                    .clip(CircleShape)
+                    .background(Signal.core().copy(alpha = railAlpha))
+            )
+        }
+        Card(
+            onClick = { onExpandChange(!expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .semantics {
+                    stateDescription = if (expanded) expandedState else collapsedState
+                },
+            shape = cardShape(),
+            colors = CardDefaults.cardColors(
+                containerColor = cardContainerColor(),
+                contentColor = MaterialTheme.colorScheme.onSurface
+            ),
+            border = BorderStroke(1.dp, cardBorderColor()),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                    AppIcon(
+                        target = target,
+                        state = iconState,
+                        contentAlpha = if (settings.enabled) 1f else 0.72f
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Text(
-                            text = summary,
-                            // The "not installed" badge is measured first, so a long
-                            // summary is ellipsized instead of pushing the badge out.
-                            modifier = Modifier.weight(1f, fill = false),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = label,
+                            style = MaterialTheme.typography.titleMedium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (!iconState.installed) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Text(
-                                text = stringResource(R.string.app_not_installed),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = summary,
+                                // The "not installed" badge is measured first, so a long
+                                // summary is ellipsized instead of pushing the badge out.
+                                modifier = Modifier.weight(1f, fill = false),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            if (!iconState.installed) {
+                                Text(
+                                    text = stringResource(R.string.app_not_installed),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
+
+                    // One arrow that turns, in both states. Previously the open card swapped it for a
+                    // MoreVert button, which put a third control in the header and moved the signal
+                    // sideways; the reset menu now lives with the other per-card meta action.
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .rotate(chevronRotation)
+                    )
+
+                    Switch(
+                        checked = settings.enabled,
+                        onCheckedChange = { enabled ->
+                            onEnabledChange(enabled)
+                            expandJob?.cancel()
+                            expandJob = scope.launch {
+                                // Let the switch thumb travel before the card grows, so one change reads
+                                // as cause then consequence. Collapsing happens immediately.
+                                if (enabled && animations) delay(Motion.SWITCH_LEAD_MS)
+                                onExpandChange(enabled)
+                            }
+                        },
+                        modifier = Modifier.semantics { contentDescription = switchDescription }
+                    )
                 }
 
-                // One arrow that turns, in both states. Previously the open card swapped it for a
-                // MoreVert button, which put a third control in the header and moved the signal
-                // sideways; the reset menu now lives with the other per-card meta action.
-                Icon(
-                    imageVector = Icons.Filled.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .rotate(chevronRotation)
-                )
-
-                Switch(
-                    checked = settings.enabled,
-                    onCheckedChange = { enabled ->
-                        onEnabledChange(enabled)
-                        expandJob?.cancel()
-                        expandJob = scope.launch {
-                            // Let the switch thumb travel before the card grows, so one change reads
-                            // as cause then consequence. Collapsing happens immediately.
-                            if (enabled && animations) delay(Motion.SWITCH_LEAD_MS)
-                            onExpandChange(enabled)
-                        }
-                    },
-                    modifier = Modifier.semantics { contentDescription = switchDescription }
-                )
-            }
-
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ModeSelector(
-                        target = target,
-                        mode = settings.mode,
-                        onModeChange = onModeChange
-                    ) {
-                        Box {
-                            IconButton(onClick = { menuOpen = true }) {
-                                Icon(
-                                    imageVector = Icons.Filled.MoreVert,
-                                    contentDescription = stringResource(R.string.action_more)
-                                )
-                            }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.action_reset_default)) },
-                                    leadingIcon = {
-                                        Icon(imageVector = Icons.Filled.RestartAlt, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        menuOpen = false
-                                        showResetDialog = true
-                                    }
-                                )
+                AnimatedVisibility(
+                    visible = expanded,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ModeSelector(
+                            target = target,
+                            mode = settings.mode,
+                            onModeChange = onModeChange
+                        ) {
+                            Box {
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.MoreVert,
+                                        contentDescription = stringResource(R.string.action_more)
+                                    )
+                                }
+                                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.action_reset_default)) },
+                                        leadingIcon = {
+                                            Icon(imageVector = Icons.Filled.RestartAlt, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            menuOpen = false
+                                            showResetDialog = true
+                                        }
+                                    )
+                                }
                             }
                         }
+                        StepEditor(
+                            target = target,
+                            settings = settings,
+                            effectiveLimit = effectiveLimit,
+                            readoutValue = readoutValue,
+                            onValueChange = onValueChange,
+                            onMaxStepsChange = onMaxStepsChange,
+                            onDraftMaxStepsChange = { draftMaxSteps = it }
+                        )
                     }
-                    StepEditor(
-                        target = target,
-                        settings = settings,
-                        effectiveLimit = effectiveLimit,
-                        readoutValue = readoutValue,
-                        onValueChange = onValueChange,
-                        onMaxStepsChange = onMaxStepsChange,
-                        onDraftMaxStepsChange = { draftMaxSteps = it }
-                    )
                 }
             }
         }
@@ -1012,26 +1042,40 @@ private fun StepButton(symbol: String, description: String, enabled: Boolean, on
     )
     val shape = rememberMorphShape(MaterialShapes.Circle, MaterialShapes.Square, pressProgress)
 
-    Surface(
-        color = container,
-        contentColor = content,
-        shape = shape,
-        modifier = Modifier
-            .size(56.dp)
-            .clickable(
-                enabled = enabled,
-                onClickLabel = description,
-                role = Role.Button,
-                interactionSource = interactionSource,
-                indication = ripple()
-            ) { onStep() }
-            .semantics {
-                contentDescription = description
-                stateDescription = enabledState
+    // One earned light source per held button: a 6 dp ring that expands on each repeat, and
+    // disappears the moment the finger lifts. No blur, no shadow, no infinite loop.
+    val ring = if (pressed && enabled) Signal.halo() else Signal.halo().copy(alpha = 0f)
+
+    Box(contentAlignment = Alignment.Center) {
+        if (pressed && enabled) {
+            Box(
+                modifier = Modifier
+                    .size(68.dp)
+                    .clip(CircleShape)
+                    .background(ring)
+            )
+        }
+        Surface(
+            color = container,
+            contentColor = content,
+            shape = shape,
+            modifier = Modifier
+                .size(56.dp)
+                .clickable(
+                    enabled = enabled,
+                    onClickLabel = description,
+                    role = Role.Button,
+                    interactionSource = interactionSource,
+                    indication = ripple()
+                ) { onStep() }
+                .semantics {
+                    contentDescription = description
+                    stateDescription = enabledState
+                }
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(text = symbol, style = MaterialTheme.typography.titleLarge)
             }
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text = symbol, style = MaterialTheme.typography.titleLarge)
         }
     }
 }
@@ -1225,7 +1269,16 @@ private fun ConnectionSheet(state: SettingsState, onDismiss: () -> Unit) {
         ) {
             Text(
                 text = stringResource(R.string.status_sheet_title),
-                style = MaterialTheme.typography.headlineSmall
+                style = MaterialTheme.typography.headlineSmallEmphasized
+            )
+            // The same map as the app bar, at detail size: a still frame already says which
+            // targets are wired, so the sheet does not depend on the connect animation.
+            ConnectionMap(
+                connected = state.connected,
+                enabledCount = AppTarget.entries.count { state.settingsFor(it).enabled },
+                modifier = Modifier
+                    .size(144.dp)
+                    .align(Alignment.CenterHorizontally)
             )
             Row(
                 verticalAlignment = Alignment.CenterVertically,
