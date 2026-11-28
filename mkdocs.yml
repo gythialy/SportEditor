@@ -1,0 +1,68 @@
+site_name: SportEditor 运动修改器
+site_description: 基于 libxposed 的步数修改模块，可为微信、支付宝、QQ、微博分别设置步数、修改方式和每日上限。
+site_url: https://gythialy.github.io/SportEditor/
+repo_url: https://github.com/gythialy/SportEditor
+repo_name: gythialy/SportEditor
+docs_dir: docs
+
+theme:
+  name: material
+  # Simplified Chinese (zh-CN); Material 9.8.2 ships the "zh" template only.
+  language: zh
+  favicon: assets/icon.svg
+  logo: assets/icon.svg
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: green
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: green
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+
+nav:
+  - 首页: index.md
+  - 使用手册: user-guide.md
+  - 开发文档: development.md
+  - 模拟器测试: emulator-test.md
+  - 设计系统: design/README.md
+  - 发布与签名: release.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - fenced_code
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/gythialy/SportEditor
+
+copyright: Copyright &copy; 2026 Goren G · MIT License

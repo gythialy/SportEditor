@@ -1,69 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="SportEditor — LSPosed 步数修改器">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="SportEditor — LSPosed step counter module, Live Circuit">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#05261E"/>
-      <stop offset="0.55" stop-color="#0A5C47"/>
-      <stop offset="1" stop-color="#10A276"/>
+      <stop offset="0" stop-color="#0A0F0C"/>
+      <stop offset="1" stop-color="#111B15"/>
     </linearGradient>
-    <linearGradient id="bar" x1="0" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#7CE3B3" stop-opacity="0.25"/>
-      <stop offset="1" stop-color="#B9F6DA" stop-opacity="0.95"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0" stop-color="#7CE3B3" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#7CE3B3" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="160%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#03150F" flood-opacity="0.45"/>
-    </filter>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#7EDCB2" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
   </defs>
 
   <rect width="1280" height="320" fill="url(#bg)"/>
-  <circle cx="1120" cy="40" r="260" fill="url(#glow)"/>
-  <circle cx="1210" cy="300" r="180" fill="#7CE3B3" opacity="0.05"/>
+  <rect width="1280" height="320" fill="url(#grid)"/>
+  <path d="M0 288H1280" stroke="#263029" stroke-width="1"/>
 
-  <!-- step bars -->
-  <g opacity="0.9">
-    <rect x="1070" y="240" width="22" height="60" rx="11" fill="#FFFFFF" opacity="0.10"/>
-    <rect x="1106" y="214" width="22" height="86" rx="11" fill="#FFFFFF" opacity="0.14"/>
-    <rect x="1142" y="182" width="22" height="118" rx="11" fill="#FFFFFF" opacity="0.18"/>
-    <rect x="1178" y="146" width="22" height="154" rx="11" fill="url(#bar)"/>
-    <rect x="1214" y="120" width="22" height="180" rx="11" fill="#FFFFFF" opacity="0.10"/>
-  </g>
-  <text x="1042" y="54" font-family="'PingFang SC','Noto Sans CJK SC','Microsoft YaHei',sans-serif" font-size="15" font-weight="600" letter-spacing="3" fill="#B9F6DA" opacity="0.9">DAILY CAP</text>
-  <text x="1038" y="108" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="700" fill="#FFFFFF" opacity="0.92">80,000</text>
-
-  <!-- icon -->
-  <g filter="url(#shadow)">
-    <rect x="64" y="96" width="128" height="128" rx="32" fill="#FFFFFF" opacity="0.10"/>
-    <g transform="translate(80 112) scale(0.926)">
-      <rect width="108" height="108" rx="24" fill="#0B7A5A"/>
-      <g fill="#FFFFFF">
-        <rect x="43" y="64" width="12" height="16" rx="4"/>
-        <rect x="58" y="56" width="12" height="24" rx="4"/>
-        <rect x="73" y="46" width="12" height="34" rx="4"/>
-        <g transform="rotate(-18 36 36)">
-          <rect x="30.5" y="31" width="11" height="20" rx="5.5"/>
-          <circle cx="33" cy="26" r="2.3"/>
-          <circle cx="37.3" cy="24.6" r="2.6"/>
-          <circle cx="41.6" cy="25.6" r="2.3"/>
-          <circle cx="45.2" cy="28.4" r="1.9"/>
-        </g>
-      </g>
+  <!-- Brand mark -->
+  <rect x="56" y="96" width="112" height="112" rx="28" fill="#0B7A5A"/>
+  <g transform="translate(71 111) scale(0.759)" fill="#FFFFFF">
+    <rect x="43" y="64" width="12" height="16" rx="4"/>
+    <rect x="58" y="56" width="12" height="24" rx="4"/>
+    <rect x="73" y="46" width="12" height="34" rx="4"/>
+    <g transform="rotate(-18 36 36)">
+      <rect x="30.5" y="31" width="11" height="20" rx="5.5"/>
+      <circle cx="33" cy="26" r="2.3"/>
+      <circle cx="37.3" cy="24.6" r="2.6"/>
+      <circle cx="41.6" cy="25.6" r="2.3"/>
+      <circle cx="45.2" cy="28.4" r="1.9"/>
     </g>
   </g>
+  <text x="200" y="166" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="58" font-weight="600" letter-spacing="0.5" fill="#F2F7F3">SportEditor</text>
+  <text x="202" y="206" font-family="'Noto Sans CJK SC','PingFang SC',sans-serif" font-size="23" font-weight="500" fill="#B3CCBC">LSPosed 步数修改器</text>
+  <text x="203" y="242" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="500" letter-spacing="1.2" fill="#9FAEA5">LIBXPOSED · KOTLIN · COMPOSE</text>
+  <path d="M584 64V256" stroke="#263029" stroke-width="1"/>
 
-  <!-- title -->
-  <text x="232" y="158" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="62" font-weight="700" letter-spacing="0.5" fill="#FFFFFF">SportEditor</text>
-  <text x="234" y="198" font-family="'PingFang SC','Noto Sans CJK SC','Microsoft YaHei',sans-serif" font-size="23" font-weight="400" fill="#CDEFE2">LSPosed 步数修改器 · Modern Xposed API</text>
+  <!-- Instrument panel -->
+  <rect x="608" y="36" width="616" height="248" rx="20" fill="#0D1511" stroke="#263029" stroke-width="1"/>
+  <path d="M620 52H636 M620 52V68 M1212 268H1196 M1212 268V252" fill="none" stroke="#7EDCB2" stroke-opacity="0.45" stroke-width="1.5"/>
+  <text x="636" y="72" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="600" letter-spacing="3" fill="#9FAEA5">LIVE CIRCUIT</text>
+  <circle cx="1120" cy="67" r="4" fill="#7EDCB2"/>
+  <text x="1134" y="72" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="13" font-weight="600" letter-spacing="2" fill="#7EDCB2">LINK ACTIVE</text>
+  <path d="M636 90H1196" stroke="#263029" stroke-width="1"/>
 
-  <!-- chips -->
-  <g font-family="'PingFang SC','Noto Sans CJK SC','Microsoft YaHei',sans-serif" font-size="15" font-weight="500">
-    <rect x="234" y="224" width="214" height="34" rx="17" fill="#FFFFFF" opacity="0.10"/>
-    <text x="250" y="246" fill="#E7FFF5">微信 / 支付宝 / QQ / 微博</text>
-    <rect x="462" y="224" width="166" height="34" rx="17" fill="#FFFFFF" opacity="0.10"/>
-    <text x="478" y="246" fill="#E7FFF5">Kotlin · Compose</text>
-    <rect x="642" y="224" width="160" height="34" rx="17" fill="#7CE3B3" opacity="0.16"/>
-    <text x="658" y="246" fill="#B9F6DA">libxposed API 102</text>
+  <!-- Reading -->
+  <text x="636" y="124" font-family="'Noto Sans CJK SC','PingFang SC',sans-serif" font-size="14" font-weight="500" fill="#9FAEA5">今日步数 / STEPS TODAY</text>
+  <text x="634" y="192" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="66" font-weight="600" letter-spacing="-1" fill="#E6EDE7">80,000</text>
+  <path d="M636 222H872" stroke="#263029" stroke-width="1"/>
+  <path d="M636 216V228 M695 216V228 M754 216V228 M813 216V228 M872 216V228" stroke="#67766C" stroke-width="1"/>
+  <circle cx="813" cy="222" r="9" fill="none" stroke="#7EDCB2" stroke-opacity="0.28" stroke-width="2"/>
+  <circle cx="813" cy="222" r="3.5" fill="#7EDCB2"/>
+  <text x="636" y="250" font-family="'Noto Sans CJK SC','PingFang SC',sans-serif" font-size="11" font-weight="500" fill="#9FAEA5">基础</text>
+  <text x="872" y="250" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="11" font-weight="500" letter-spacing="1" text-anchor="end" fill="#9FAEA5">+100</text>
+
+  <!-- Four-target link -->
+  <rect x="916" y="110" width="292" height="120" rx="12" fill="#101A15" stroke="#263029" stroke-width="1"/>
+  <path d="M940 124V216" stroke="#7EDCB2" stroke-opacity="0.55" stroke-width="1.5"/>
+  <circle cx="940" cy="170" r="10" fill="#101A15" stroke="#7EDCB2" stroke-width="1.5"/>
+  <circle cx="940" cy="170" r="3.5" fill="#7EDCB2"/>
+  <path d="M940 132H963" stroke="#7EDCB2" stroke-opacity="0.55" stroke-width="1.5"/>
+  <path d="M940 161H963 M940 190H963 M940 219H963" stroke="#7EDCB2" stroke-opacity="0.16" stroke-width="1.5"/>
+  <circle cx="968" cy="132" r="5" fill="#101A15" stroke="#7EDCB2" stroke-width="1.5"/>
+  <circle cx="968" cy="132" r="2" fill="#7EDCB2"/>
+  <g fill="#101A15" stroke="#7EDCB2" stroke-opacity="0.4" stroke-width="1.5">
+    <circle cx="968" cy="161" r="5"/>
+    <circle cx="968" cy="190" r="5"/>
+    <circle cx="968" cy="219" r="5"/>
+  </g>
+  <g font-family="'Noto Sans CJK SC','PingFang SC',sans-serif" font-size="15" font-weight="500" fill="#E6EDE7">
+    <text x="984" y="138">微信</text>
+    <text x="984" y="167">支付宝</text>
+    <text x="984" y="196">QQ</text>
+    <text x="984" y="225">微博</text>
+  </g>
+  <text x="1192" y="138" font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="12" font-weight="600" letter-spacing="1.5" fill="#7EDCB2" text-anchor="end">ON</text>
+  <g font-family="'SF Pro Display','Helvetica Neue',Arial,sans-serif" font-size="12" font-weight="600" letter-spacing="1.5" fill="#67766C" text-anchor="end">
+    <text x="1192" y="167">OFF</text>
+    <text x="1192" y="196">OFF</text>
+    <text x="1192" y="225">OFF</text>
   </g>
 </svg>
